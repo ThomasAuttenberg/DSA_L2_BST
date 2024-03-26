@@ -28,7 +28,6 @@ class BinaryTree
 private:
 
 	struct Node {
-		Node* parent;
 		K key;
 		V value;
 		Node* left = nullptr;
@@ -106,6 +105,7 @@ public:
 	protected:
 		friend class BinaryTree;
 		BinaryTree<K, V>::Node* ptr = nullptr;
+		std::stack<Node*> nodes;
 		iterator_base(Node*);
 		iterator_base() {};
 		void copy(const iterator_base& other);
@@ -124,7 +124,6 @@ public:
 		forward_iterator_base(Node* node) : iterator_base(node) {};
 		void goForward() override;
 		void goBackward() override;
-		Node* endNodePrevious = nullptr;
 	public:
 		forward_iterator_base() {};
 		friend std::strong_ordering operator<=>(const BinaryTree<K, V>::forward_iterator_base& one, const BinaryTree<K, V>::forward_iterator_base& two) {
@@ -144,7 +143,6 @@ public:
 		reverse_iterator_base(Node* node) : iterator_base(node) {};
 		void goForward() override;
 		void goBackward() override;
-		Node* endNodePrevious = nullptr;
 	public:
 		reverse_iterator_base() {};
 		friend std::strong_ordering operator<=>(const BinaryTree<K, V>::reverse_iterator_base& one, const BinaryTree<K, V>::reverse_iterator_base& two) {
@@ -287,88 +285,112 @@ BinaryTree<K, V>::const_iterator BinaryTree<K, V>::find(const K& key) const {
 template<Comparable K, CopyConstructible V>
 inline BinaryTree<K, V>::iterator BinaryTree<K, V>::end()
 {
-	if (root == nullptr) return iterator(nullptr);
-	iterator it(nullptr);
-	Node* endNodePrevious = root;
-	while (endNodePrevious->right)
-		endNodePrevious = endNodePrevious->right;
-	it.endNodePrevious = endNodePrevious;
-	return it;
+	if (this->root == nullptr) return iterator();
+	iterator a;
+	Node* currentNode = this->root;
+	while (currentNode) {
+		a.nodes.push(currentNode);
+		currentNode = currentNode->right;
+	}
+	a.ptr = currentNode;
+	return a;
 }
 
 template<Comparable K, CopyConstructible V>
 inline BinaryTree<K, V>::const_iterator BinaryTree<K, V>::cend() const
 {
-	if (root == nullptr) return const_iterator(nullptr);
-	const_iterator it(nullptr);
-	Node* endNodePrevious = root;
-	while (endNodePrevious->right)
-		endNodePrevious = endNodePrevious->right;
-	it.endNodePrevious = endNodePrevious;
-	return it;
+	if (this->root == nullptr) return iterator();
+	iterator a;
+	Node* currentNode = this->root;
+	while (currentNode) {
+		a.nodes.push(currentNode);
+		currentNode = currentNode->right;
+	}
+	a.ptr = currentNode;
+	return a;
 }
 
 template<Comparable K, CopyConstructible V>
 inline BinaryTree<K, V>::iterator BinaryTree<K, V>::begin()
 {
-	if (root == nullptr) return iterator(nullptr);
-	Node* currentNode = root;
-	while (currentNode->left)
+	if (this->root == nullptr) return iterator();
+	iterator a;
+	Node* currentNode = this->root;
+	while (currentNode->left) {
+		a.nodes.push(currentNode);
 		currentNode = currentNode->left;
-	return iterator(currentNode);
+	}
+	a.ptr = currentNode;
+	return a;
 }
 template<Comparable K, CopyConstructible V>
 inline BinaryTree<K, V>::const_iterator BinaryTree<K, V>::cbegin() const
 {
-	if (root == nullptr) return const_iterator(nullptr);
-	Node* currentNode = root;
-	while (currentNode->left)
+	const_iterator a;
+	Node* currentNode = this->root;
+	while (currentNode->left) {
+		a.nodes.push(currentNode);
 		currentNode = currentNode->left;
-	return const_iterator(currentNode);
+	}
+	a.ptr = currentNode;
+	return a;
+
 }
 
 template<Comparable K, CopyConstructible V>
 inline BinaryTree<K, V>::reverse_iterator BinaryTree<K, V>::rend()
 {
-	if (root == nullptr) return reverse_iterator(nullptr);
-	reverse_iterator it(nullptr);
-	Node* endNodePrevious = root;
-	while (endNodePrevious->left)
-		endNodePrevious = endNodePrevious->left;
-	it.endNodePrevious = endNodePrevious;
-	return it;
+	if (this->root == nullptr) return reverse_iterator();
+	reverse_iterator a;
+	Node* currentNode = this->root;
+	while (currentNode) {
+		a.nodes.push(currentNode);
+		currentNode = currentNode->left;
+	}
+	a.ptr = currentNode;
+	return a;
 }
 
 template<Comparable K, CopyConstructible V>
 inline BinaryTree<K, V>::const_reverse_iterator BinaryTree<K, V>::crend() const
 {
-	if (root == nullptr) return const_reverse_iterator(nullptr);
-	const_reverse_iterator it(nullptr);
-	Node* endNodePrevious = root;
-	while (endNodePrevious->left)
-		endNodePrevious = endNodePrevious->left;
-	it.endNodePrevious = endNodePrevious;
-	return it;
+	if (this->root == nullptr) return reverse_iterator();
+	reverse_iterator a;
+	Node* currentNode = this->root;
+	while (currentNode) {
+		a.nodes.push(currentNode);
+		currentNode = currentNode->left;
+	}
+	a.ptr = currentNode;
+	return a;
 }
 
 template<Comparable K, CopyConstructible V>
 inline BinaryTree<K, V>::reverse_iterator BinaryTree<K, V>::rbegin()
 {
-	if (root == nullptr) return reverse_iterator(nullptr);
-	Node* currentNode = root;
-	while (currentNode->right)
+	if (this->root == nullptr) return reverse_iterator();
+	reverse_iterator a;
+	Node* currentNode = this->root;
+	while (currentNode->right) {
+		a.nodes.push(currentNode);
 		currentNode = currentNode->right;
-	return reverse_iterator(currentNode);
+	}
+	a.ptr = currentNode;
+	return a;
 }
 
 template<Comparable K, CopyConstructible V>
 inline BinaryTree<K, V>::const_reverse_iterator BinaryTree<K, V>::crbegin() const
 {
-	if (root == nullptr) return reverse_iterator(nullptr);
-	Node* currentNode = root;
-	while (currentNode->right)
-		currentNode = root->right;
-	return const_reverse_iterator(currentNode);
+	if (this->root == nullptr) return reverse_iterator();
+	reverse_iterator a;
+	Node* currentNode = this->root;
+	while (currentNode->right) {
+		a.nodes.push(currentNode);
+		currentNode = currentNode->right;
+	}
+	a.ptr = currentNode;
+	return a;
 }
 
 template<Comparable K, CopyConstructible V>
@@ -462,7 +484,6 @@ inline bool BinaryTree<K, V>::insert(const K& key, const V& value)
 		if (key > currentNode->key) {
 			if (currentNode->right == nullptr) {
 				currentNode->right = newNode;
-				newNode->parent = currentNode;
 				break;
 			}
 			else {
@@ -473,7 +494,6 @@ inline bool BinaryTree<K, V>::insert(const K& key, const V& value)
 		if (key < currentNode->key) {
 			if (currentNode->left == nullptr) {
 				currentNode->left = newNode;
-				newNode->parent = currentNode;
 				break;
 			}
 			else {
@@ -810,102 +830,104 @@ std::strong_ordering operator<=>(const typename BinaryTree<K, V>::reverse_iterat
 template<Comparable K, CopyConstructible V>
 inline void BinaryTree<K, V>::forward_iterator_base::goForward()
 {
-	if (this->ptr == nullptr) {
-		if(this->endNodePrevious == nullptr)
-			throw std::logic_error("Iterator going forward operation: can't use the iterator isn't linked to any container");
-		else
-			throw std::logic_error("Iterator going forward operation: can't go through the end element.");
-	}
-	// If there are any children, bigger then current:
+	if (this->ptr == nullptr) throw std::logic_error("Iterator forward operation: can't go through the end node");
+	
+	// Get the right node if it's possible
 	if (this->ptr->right) {
+		this->nodes.push(this->ptr);
 		this->ptr = this->ptr->right;
-		//if bigger child has children less then it -> go through the left branch
-		while (this->ptr->left)
+		// Go down through the left branch
+		while (this->ptr->left) {
+			this->nodes.push(this->ptr);
 			this->ptr = this->ptr->left;
+		}
 		return;
+
 	}
-	// If there are no bigger children -> go to the first parent node with the bigger key:
-	Node* temp = this->ptr;
-	while ((temp = temp->parent)) {
-		if (temp->key > this->ptr->key) break;
+	// If there is no right nodes : go to the first parent with the bigger key
+	while (!this->nodes.empty() && this->nodes.top()->key < this->ptr->key) {
+		this->nodes.pop();
 	}
-	// If that parent exists
-	if (temp != nullptr) {
-		this->ptr = temp;
+	// If that parent exists set iterator to it
+	if (!this->nodes.empty()) {
+		this->ptr = this->nodes.top();
+		this->nodes.pop();
 	}
-	//Else -> go to the endNode
+	// If that parent doesn't exists: we are in the end node
 	else {
-		this->endNodePrevious = this->ptr;
+		this->nodes.push(this->ptr);
 		this->ptr = nullptr;
 	}
+
 }
 
 template<Comparable K, CopyConstructible V>
 inline void BinaryTree<K, V>::forward_iterator_base::goBackward()
 {
 	if (this->ptr == nullptr) {
-		if (this->endNodePrevious != nullptr) {
-			this->ptr = this->endNodePrevious;
+		if (!this->nodes.empty()) {
+			this->ptr = this->nodes.top();
+			this->nodes.pop();
 			return;
-		}
-		else {
-			throw std::logic_error("Iterator going back operation: can't use the iterator isn't linked to any container");
 		}
 	}
 
-	// If there are any children, less then current:
+	// Get the left node if it's possible
 	if (this->ptr->left) {
+		this->nodes.push(this->ptr);
 		this->ptr = this->ptr->left;
-		//if less child has children bigger then it -> go through the right branch
-		while (this->ptr->right)
+		// Go down through the right branch
+		while (this->ptr->right) {
+			this->nodes.push(this->ptr);
 			this->ptr = this->ptr->right;
+		}
 		return;
+
 	}
-	// If there are no less children -> go to the first parent node with the less key:
-	Node* temp = this->ptr;
-	while ((temp = temp->parent)) {
-		if (temp->key < this->ptr->key) break;
+	// If there is no right nodes : go to the first parent with the less key
+	while (!this->nodes.empty() && this->nodes.top()->key > this->ptr->key) {
+		this->nodes.pop();
 	}
-	// If that parent exists
-	if (temp != nullptr) {
-		this->ptr = temp;
+	// If that parent exists set iterator to it
+	if (!this->nodes.empty()) {
+		this->ptr = this->nodes.top();
+		this->nodes.pop();
 	}
-	//Else -> we are at the begin element
+	// If that parent doesn't exists: we are in the begin node
 	else {
-		throw std::logic_error("Iterator going back operation: can't go through the begin element");
+		throw std::logic_error("Iterator going back operation: can't go through the begin node");
 	}
 }
 
 template<Comparable K, CopyConstructible V>
 inline void BinaryTree<K, V>::reverse_iterator_base::goForward()
 {
-	if (this->ptr == nullptr) {
-		if (this->endNodePrevious == nullptr)
-			throw std::logic_error("Reverse Iterator going forward operation: can't use the iterator isn't linked to any container");
-		else
-			throw std::logic_error("Reverse Iterator going forward operation: can't go through the rend element.");
-	}
+	if (this->ptr == nullptr) throw std::logic_error("Reverse iterator forward operation: can't go through the rend node");
 
-	// If there are any children, less then current:
+	// Get the left node if it's possible
 	if (this->ptr->left) {
+		this->nodes.push(this->ptr);
 		this->ptr = this->ptr->left;
-		//if less child has children bigger then it -> go through the right branch
-		while (this->ptr->right)
+		// Go down through the right branch
+		while (this->ptr->right) {
+			this->nodes.push(this->ptr);
 			this->ptr = this->ptr->right;
+		}
 		return;
+
 	}
-	// If there are no less children -> go to the first parent node with the less key:
-	Node* temp = this->ptr;
-	while ((temp = temp->parent)) {
-		if (temp->key < this->ptr->key) break;
+	// If there is no right nodes : go to the first parent with the less key
+	while (!this->nodes.empty() && this->nodes.top()->key > this->ptr->key) {
+		this->nodes.pop();
 	}
-	// If that parent exists
-	if (temp != nullptr) {
-		this->ptr = temp;
+	// If that parent exists set iterator to it
+	if (!this->nodes.empty()) {
+		this->ptr = this->nodes.top();
+		this->nodes.pop();
 	}
-	//Else -> go to the endNode
+	// If that parent doesn't exists: we are in the end node
 	else {
-		this->endNodePrevious = this->ptr;
+		this->nodes.push(this->ptr);
 		this->ptr = nullptr;
 	}
 }
@@ -914,33 +936,36 @@ template<Comparable K, CopyConstructible V>
 inline void BinaryTree<K, V>::reverse_iterator_base::goBackward()
 {
 	if (this->ptr == nullptr) {
-		if (this->endNodePrevious != nullptr) {
-			this->ptr = this->endNodePrevious;
+		if (!this->nodes.empty()) {
+			this->ptr = this->nodes.top();
+			this->nodes.pop();
 			return;
 		}
-		else {
-			throw std::logic_error("Iterator going back operation: can't use the iterator isn't linked to any container");
-		}
 	}
-	// If there are any children, bigger then current:
+
+	// Get the right node if it's possible
 	if (this->ptr->right) {
+		this->nodes.push(this->ptr);
 		this->ptr = this->ptr->right;
-		//if bigger child has children less then it -> go through the left branch
-		while (this->ptr->left)
+		// Go down through the left branch
+		while (this->ptr->left) {
+			this->nodes.push(this->ptr);
 			this->ptr = this->ptr->left;
+		}
 		return;
+
 	}
-	// If there are no bigger children -> go to the first parent node with the bigger key:
-	Node* temp = this->ptr;
-	while ((temp = temp->parent)) {
-		if (temp->key > this->ptr->key) break;
+	// If there is no right nodes : go to the first parent with the bigger key
+	while (!this->nodes.empty() && this->nodes.top()->key < this->ptr->key) {
+		this->nodes.pop();
 	}
-	// If that parent exists
-	if (temp != nullptr) {
-		this->ptr = temp;
+	// If that parent exists set iterator to it
+	if (!this->nodes.empty()) {
+		this->ptr = this->nodes.top();
+		this->nodes.pop();
 	}
-	//Else -> we are at the begin element
+	// If that parent doesn't exists: we are in the begin node
 	else {
-		throw std::logic_error("Iterator going back operation: can't go through the rbegin element");
+		throw std::logic_error("Reverse iterator going back operation: can't go through the rbegin node");
 	}
 }

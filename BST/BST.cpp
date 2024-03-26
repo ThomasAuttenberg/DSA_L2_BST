@@ -11,9 +11,16 @@ int main()
     };
     BinaryTree<int, int> s;
     s.insert(4, 5);
-    s[4] = 12;
-   
+    s.insert(2, 0);
+    s.insert(3, 11);
+    s.insert(5, 15);
+    //auto it = s.begin();
     
+    for (auto i = s.rbegin(); i < s.rend(); i++) std::cout << (*i).first << " ";
+    
+    
+
+    /*
     int n = 0;
     size_t _depth = 0;
     s.forEachHorizontal([&](int key, int val, size_t depth) {
