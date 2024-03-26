@@ -10,21 +10,49 @@ int main()
         int a;
     };
     BinaryTree<int, int> s;
-    s.insert(5, 2);
-    s.insert(12, 4);
-    s.insert(6, 5);
-    s.insert(-5, 6);
-    s.insert(-8, 0);
-    s.insert(133, 12);
-    s.insert(245, 0);
-    s.insert(0, 1);
-    s.insert(3, 45);
-    std::cout << s.size();
-    s.clear();
-    s.insert(5, 2);
-    for (auto it = s.rbegin(); it < s.rend(); it++) {
-        std::cout << (*it).first<<" ";
-    }
+    s.insert(4, 5);
+    s[4] = 12;
+   
+    
+    int n = 0;
+    size_t _depth = 0;
+    s.forEachHorizontal([&](int key, int val, size_t depth) {
+        std::cout << "[" << key << ":" << val << "] ";
+        if (_depth != depth) { _depth++; std::cout << "\n"; }
+        });
+    std::cout << "\n";
+    size_t lastFixedDepth = 0;
+    std::queue<std::vector<int>> toPrint;
+    std::vector<int> currentDepthArray;
+   /* s.forEachHorizontal([&](int key, int value, size_t depth) {
+        if (lastFixedDepth != depth) {
+            lastFixedDepth = depth;
+            toPrint.push(currentDepthArray);
+            currentDepthArray.clear();
+        }
+        currentDepthArray.push_back(key);
+    });
+    toPrint.push(currentDepthArray);
+    int currentDepth = 0;
+    while (!toPrint.empty()) {
+        currentDepthArray = toPrint.front();
+        toPrint.pop();
+        for (int i = 0; i < currentDepthArray.size(); i++) {
+            for (int j = 0; j < (lastFixedDepth - currentDepth)*3; j++) std::cout << " ";
+            std::cout << currentDepthArray[i];
+            for (int j = 0; j < (lastFixedDepth - currentDepth)*3; j++) std::cout << " ";
+        }
+        currentDepth++;
+        std::cout << "\n";
+    }*/
+    //std::cout << s.size();
+    //s.print();
+    //std::cout << s.size();
+    //s.clear();
+    //s.insert(5, 2);
+    //for (auto it = s.rbegin(); it < s.rend(); it++) {
+    //    std::cout << (*it).first<<" ";
+    //}
     //BinaryTree<std::string, int>::const_iterator a;
     //BinaryTree<std::string, int>::const_iterator b = a;
 

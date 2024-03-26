@@ -4,6 +4,7 @@
 #include <functional>
 #include <stack>
 #include <queue>
+#include <math.h>
 
 template<typename T>
 concept Hashable = requires(T a) {
@@ -72,12 +73,15 @@ public:
 	const_reverse_iterator crend() const;
 	reverse_iterator rbegin();
 	const_reverse_iterator crbegin() const;
+	V& operator[](const K&);
+	V operator[](const K&) const;
 
 	/*============= Operations =================*/
 
 	bool insert(const K&, const V&);
 	bool remove(const K&);
 	void clear();
+	void print();
 
 	/*============= Pass through =============*/
 
@@ -86,9 +90,9 @@ public:
 	//In order iterative pass algotithm. Transfers every tree key and corresponding value into lambda argument
 	void forEach(std::function<void(const K&, const V&)>) const;
 	//Horizontal iterative pass algorithm. Transfers every tree key and corresponding value into lambda argument
-	void forEachHorizontal(std::function<void(const K&, V&)>);
+	void forEachHorizontal(std::function<void(const K&, V&, size_t)>);
 	//Horizontal iterative pass algotithm. Transfers every tree key and corresponding value into lambda argument
-	void forEachHorizontal(std::function<void(const K&, const V&)>) const;
+	void forEachHorizontal(std::function<void(const K&, const V&, size_t)>) const;
 
 
 	/*============= Destructor ==============*/
@@ -110,7 +114,9 @@ public:
 		virtual void goForward() = 0;
 		virtual void goBackward() = 0;
 	public:
-		bool operator==(const iterator_base& other);
+		friend bool operator==(const iterator_base& one, const iterator_base& two) {
+			return one.ptr == two.ptr;
+		};
 	};
 
 	class forward_iterator_base : public iterator_base {
@@ -238,11 +244,6 @@ inline std::pair<const K&, V&> BinaryTree<K, V>::iterator_base::get() const
 	return std::pair<const K&, V&>(this->ptr->key, this->ptr->value);
 }
 
-template<Comparable K, CopyConstructible V>
-inline bool BinaryTree<K, V>::iterator_base::operator==(const iterator_base& other)
-{
-	return this->ptr == other.ptr;
-}
 
 template<Comparable K, CopyConstructible V>
 BinaryTree<K, V>::iterator BinaryTree<K, V>::find(const K& key) {
@@ -371,6 +372,25 @@ inline BinaryTree<K, V>::const_reverse_iterator BinaryTree<K, V>::crbegin() cons
 }
 
 template<Comparable K, CopyConstructible V>
+inline V& BinaryTree<K, V>::operator[](const K& key)
+{
+	auto it = find(key);
+	if (it != end())
+		return (*it).second;
+	else throw std::out_of_range("No such key in the tree");
+
+}
+
+template<Comparable K, CopyConstructible V>
+inline V BinaryTree<K, V>::operator[](const K& key) const
+{
+	auto it = find(key);
+	if (it != cend())
+		return (*it).second;
+	else throw std::out_of_range("No such key in the tree");
+}
+
+template<Comparable K, CopyConstructible V>
 bool BinaryTree<K, V>::empty() const {
 	return size_ == 0;
 }
@@ -433,6 +453,7 @@ inline bool BinaryTree<K, V>::insert(const K& key, const V& value)
 
 	if (currentNode == nullptr) {
 		root = newNode;
+		size_++;
 		return true;
 	}
 
@@ -586,6 +607,74 @@ inline void BinaryTree<K, V>::clear()
 }
 
 template<Comparable K, CopyConstructible V>
+inline void BinaryTree<K, V>::print()
+{
+	//создаем массив на количество элементов в зависимости от уровня.
+	//сохраняем глубину и порядковый номер элемента на уровне!!!
+
+	int MAXIMUM_LEVEL = 5;
+
+	if (this->root == nullptr) return;
+	Node* root = this->root;
+	size_t depth = 0;
+	size_t ordinalNumber = 0;
+
+	struct triplet {
+		Node* node;
+		size_t depth;
+		size_t ordinalNumber;
+		triplet(Node* node, size_t depth, size_t ordinalNumber) {
+			this->node = node; this->depth = depth; this->ordinalNumber = ordinalNumber;
+		}
+	};
+	
+	std::vector<std::vector<Node*>> vectors;
+	for (int i = 0; i < pow(2,MAXIMUM_LEVEL); i++) {
+		std::vector<Node*> innerVector;
+		for (int j = 0; j < pow(2,MAXIMUM_LEVEL); j++) {
+			innerVector.push_back(nullptr);
+		}
+		vectors.push_back(innerVector);
+	}
+
+	size_t maxDepth;
+	std::queue<triplet> nodes;
+	do {
+		if (!nodes.empty()) nodes.pop();
+		vectors[depth][ordinalNumber] = root;
+		if (root->left != nullptr) nodes.push(triplet(root->left, depth+1, ordinalNumber*2));
+		if (root->right != nullptr) nodes.push(triplet(root->right, depth+1, ordinalNumber*2+1));
+		maxDepth = depth + 1;
+		if (!nodes.empty()) {
+			root = nodes.front().node;
+			depth = nodes.front().depth;
+			ordinalNumber = nodes.front().ordinalNumber;
+		}
+	} while (!nodes.empty());
+
+	size_t maxKeySize = 3;
+	size_t maxSize = 3;
+	int maxValuesNumber = pow(2, maxDepth);
+	int symbolsInString = maxKeySize * maxValuesNumber + maxValuesNumber; //числа (3 символа) + пробелы (1 символ)
+	for (int i = 0; i <= maxDepth && i<=MAXIMUM_LEVEL; i++) {
+		int thisStringValuesNumber = pow(2, i);
+		for (int j = 0; j < thisStringValuesNumber; j++) {
+			int probelsAfterEveryKey = (symbolsInString - (thisStringValuesNumber * maxKeySize)) / thisStringValuesNumber/2;
+			for (int s = 0; s < probelsAfterEveryKey; s++) std::cout << " ";
+			if (vectors[i][j] == nullptr) {
+				for (int s = 0; s < maxKeySize; s++) std::cout << " ";
+			}
+			else {
+				std::cout << vectors[i][j]->key;
+			}
+			for (int s = 0; s < probelsAfterEveryKey; s++) std::cout << " ";
+		}
+		maxSize *= 2;
+		std::cout << "\n";
+	}
+}
+
+template<Comparable K, CopyConstructible V>
 inline void BinaryTree<K, V>::forEach(std::function<void(const K&, V&)> func) {
 	Node* root = this->root;
 	std::stack<Node*> nodes;
@@ -629,37 +718,43 @@ inline void BinaryTree<K, V>::forEach(std::function<void(const K&, const V&)> fu
 }
 
 template<Comparable K, CopyConstructible V>
-inline void BinaryTree<K, V>::forEachHorizontal(std::function<void(const K&, V&)> func) {
+inline void BinaryTree<K, V>::forEachHorizontal(std::function<void(const K&, V&, size_t)> func) {
 	
 	if (this->root == nullptr) return;
 	Node* root = this->root;
-	std::queue<Node*> nodes;
+	size_t depth = 0;
+	std::queue<std::pair<Node*,size_t>> nodes;
 	do {
-		func(root->key, root->value);
-		if (root->left != nullptr) nodes.push(root->left);
-		if (root->right != nullptr) nodes.push(root->right);
+		func(root->key, root->value, depth);
+		if (root->left != nullptr) nodes.push(std::make_pair(root->left,depth+1));
+		if (root->right != nullptr) nodes.push(std::make_pair(root->right,depth+1));
 		if (!nodes.empty()) {
-			nodes.front();
+			root = nodes.front().first;
+			depth = nodes.front().second;
 			nodes.pop();
 		}
 	} while (!nodes.empty());
 }
 
 template<Comparable K, CopyConstructible V>
-inline void BinaryTree<K, V>::forEachHorizontal(std::function<void(const K&, const V&)> func) const {
+inline void BinaryTree<K, V>::forEachHorizontal(std::function<void(const K&, const V&, size_t)> func) const {
 	if (this->root == nullptr) return;
 	Node* root = this->root;
-	std::queue<Node*> nodes;
+	size_t depth = 0;
+	std::queue<std::pair<Node*, size_t>> nodes;
 	do {
-		func(root->key, root->value);
-		if (root->left != nullptr) nodes.push(root->left);
-		if (root->right != nullptr) nodes.push(root->right);
+		func(root->key, root->value, depth);
+		if (root->left != nullptr) nodes.push(std::make_pair(root->left, depth + 1));
+		if (root->right != nullptr) nodes.push(std::make_pair(root->right, depth + 1));
 		if (!nodes.empty()) {
-			nodes.front();
+			root = nodes.front().first;
+			depth = nodes.front().second;
 			nodes.pop();
 		}
 	} while (!nodes.empty());
 }
+
+
 
 
 template<Comparable K, CopyConstructible V>
