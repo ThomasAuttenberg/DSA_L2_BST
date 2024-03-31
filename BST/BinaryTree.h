@@ -5,6 +5,7 @@
 #include <stack>
 #include <queue>
 #include <math.h>
+#include <list>
 
 template<typename T>
 concept Hashable = requires(T a) {
@@ -37,7 +38,9 @@ private:
 	Node* root = nullptr;
 	size_t size_ = 0;
 
-	void forEach(std::function<void(Node*)>);
+	void forEachInternal(std::function<void(K&, V&)>) const;
+	void forEachInternal(std::function<void(Node*)>);
+	void forEachHorizontalInternal(std::function<void(K&, V&, size_t depth, size_t ordinalNumber)>) const;
 
 public:
 	class const_iterator;
@@ -45,62 +48,108 @@ public:
 	class reverse_iterator;
 	class const_reverse_iterator;
 	
-	/*============= Rule of five ===============*/
+	/*==========================================
+	          RULE OF FIVE + DESTRUCTOR
+	==========================================*/
 
 	BinaryTree() {};
 	BinaryTree(const BinaryTree& other);
 	BinaryTree(BinaryTree&& other);
 	BinaryTree& operator=(const BinaryTree& other);
 	BinaryTree& operator=(BinaryTree&& other);
+	~BinaryTree();
 
-	/*============= Informational ===============*/
+	/*==========================================
+	                INFORMATIONAL
+	==========================================*/
 
 	// Returns true or false if tree contains provided key
 	bool contains(const K& key) const;
+
+	// Returns current nodes number
 	size_t size() const;
+
+	// Shows if tree is empty
 	bool empty() const;
 
-	/*=============== Access ===================*/
+	// Returns the list of tree keys in order: {root, less elements, greater elements}
+	std::list<K> keys() const;
 
+	/*==========================================
+					  ACCESS
+	==========================================*/
+
+	// Returns the iterator pointing at the leaf contains the provided key
 	iterator find(const K& key);
+	// Returns the iterator pointing at the leaf contains the provided key
 	const_iterator find(const K& key) const;
+
+	// Returns the iterator pointing at the element behind the last one
 	iterator end();
+	// Returns the const iterator pointing at the element behind the last one
 	const_iterator cend() const;
+
+	// Returns the iterator pointing at the first element of sorted leafs sequence
 	iterator begin();
+	// Returns the const iterator pointing at the element behind the last one
 	const_iterator cbegin() const;
+
+	// Returns the reverse iterator pointing at the element behind the last one
+	// (before begin element in forward iterator notation)
 	reverse_iterator rend();
+	// Returns the const reverse iterator pointing at the element behind the last one
+	// (before begin element in forward iterator notation)
 	const_reverse_iterator crend() const;
+
+	// Returns the reverse iterator pointing at the rbegin element
 	reverse_iterator rbegin();
+	// Returns the const reverse iterator pointing at the rbegin element
 	const_reverse_iterator crbegin() const;
+
+	// Access and modyfing operator. Creates if necessary and returns the leaf with the provided key
 	V& operator[](const K&);
-	V operator[](const K&) const;
 
-	/*============= Operations =================*/
+	// Access by key and modyfing operator. Throws out_of_range exception if tree doesn't contain the provided key
+	V& at(const K&);
+	// Access by key operator. Throws out_of_range exception if tree doesn't contain the provided key
+	const V& at(const K&) const;
 
+	/*==========================================
+					  MODYFING
+	==========================================*/
+
+	// Inserts the new key:value pair in the tree
 	bool insert(const K&, const V&);
-	bool remove(const K&);
+	
+	// Removes the leaf with the corresponding key
+	bool erase(const K&);
+	
+	// Clears the tree
 	void clear();
-	void print();
 
-	/*============= Pass through =============*/
 
-	//In order iterative pass algorithm. Transfers every tree value into lambda argument
+	/*==========================================
+				PATH THROUGH METHODS
+	==========================================*/
+
+	// In order iterative pass algorithm. Transfers every tree value into lambda argument
 	void forEach(std::function<void(const K&, V&)>);
-	//In order iterative pass algotithm. Transfers every tree key and corresponding value into lambda argument
 	void forEach(std::function<void(const K&, const V&)>) const;
-	//Horizontal iterative pass algorithm. Transfers every tree key and corresponding value into lambda argument
-	void forEachHorizontal(std::function<void(const K&, V&, size_t)>);
-	//Horizontal iterative pass algotithm. Transfers every tree key and corresponding value into lambda argument
-	void forEachHorizontal(std::function<void(const K&, const V&, size_t)>) const;
+
+	// Horizontal iterative path through algorithm. Can be used to represent tree as a table
+	// Third argument is depth (>=0): displays how deep you should go to reach the leaf (row)
+	// Fourth argument is ordinalNumber (>=0): displays the position in leafs horizontal sequence (coloumn)
+	//  *(sequence gaps are possible if tree isn't completed)
+	void forEachHorizontal(std::function<void(const K&, const V&)>) const;
+	void forEachHorizontal(std::function<void(const K&, const V&, size_t depth)>) const;
+	void forEachHorizontal(std::function<void(const K&, const V&, size_t depth, size_t ordinalNumber)>) const;
 
 
-	/*============= Destructor ==============*/
+	/*==========================================
+					ITERATORS
+	==========================================*/
 
-	~BinaryTree();
-
-	/*============= Iterators ===============*/
-
-
+	// Abstract iterator interface. Highest level superclass
 	class iterator_base {
 	protected:
 		friend class BinaryTree;
@@ -119,6 +168,8 @@ public:
 		};
 	};
 
+	// Forward iterator superclass.
+	// Provides internal heirs functional and comparing operations
 	class forward_iterator_base : public iterator_base {
 	protected:
 		forward_iterator_base(Node* node) : iterator_base(node) {};
@@ -137,7 +188,9 @@ public:
 			return one.ptr->key <=> two.ptr->key;
 		};
 	};
-
+	
+	// Reverse iterator superclass
+	// Provides internal heirs functional and comparing operations
 	class reverse_iterator_base : public iterator_base {
 	protected:
 		reverse_iterator_base(Node* node) : iterator_base(node) {};
@@ -160,7 +213,7 @@ public:
 		};
 	};
 
-	//Constant forward iterator. Doesn't allow to change the value while passing through
+	// Constant forward iterator. Doesn't allow to change the value while passing through
 	class const_iterator : public forward_iterator_base {
 	private:
 		friend class BinaryTree;
@@ -169,7 +222,7 @@ public:
 		const_iterator() = default;
 		const_iterator(const iterator& other) { this->copy((iterator_base&)other); };
 		const_iterator(const const_iterator& other) = default;
-		std::pair<const K&, V> operator*() const { return this->get(); };
+		std::pair<const K&, const V&> operator*() const { return this->get(); };
 		const_iterator& operator++() { this->goForward(); return *this; };
 		const_iterator operator++(int) { const_iterator newVal = *this; this->goForward(); return newVal; };
 		const_iterator& operator--() { this->goBackward(); return *this; };
@@ -191,7 +244,7 @@ public:
 		iterator operator--(int) { iterator newVal = *this; this->goBackward(); return newVal; };
 	};
 
-	//Constant reverse iterator. Provides backward going through the container. Doesn't allow to change the value while passing through.
+	// Constant reverse iterator. Provides backward going through the container. Doesn't allow to change the value while passing through.
 	class const_reverse_iterator : public reverse_iterator_base {
 	private:
 		friend class BinaryTree;
@@ -200,14 +253,14 @@ public:
 		const_reverse_iterator() = default;
 		const_reverse_iterator(const const_reverse_iterator& other) = default;
 		const_reverse_iterator(const reverse_iterator& other) { this->copy((iterator_base&)other); };
-		std::pair<const K&, V> operator*() const { return this->get(); };
+		std::pair<const K&, const V&> operator*() const { return this->get(); };
 		const_reverse_iterator& operator++() { this->goForward(); return *this; };
 		const_reverse_iterator operator++(int) {const_reverse_iterator newVal = *this; this->goForward(); return newVal; };
 		const_reverse_iterator& operator--() { this->goBackward(); return *this; };
 		const_reverse_iterator operator--(int) { const_reverse_iterator newVal = *this; this->goBackward(); return newVal; };
 	};
 
-	//Reverse iterator. Provides backward going through the container.
+	// Reverse iterator. Provides backward going through the container.
 	class reverse_iterator : public reverse_iterator_base {
 	private:
 		friend class BinaryTree;
@@ -221,26 +274,129 @@ public:
 		reverse_iterator& operator--() { this->goBackward(); return *this; };
 		reverse_iterator operator--(int) { reverse_iterator newVal = *this; this->goBackward(); return newVal; };
 	};
-	/*=======================================*/
 };
 
+/*==========================================================================================
+===========================================================================================
+===========================================================================================
+===========================================================================================
+===========================================================================================
+
+
+
+								METHODS DEFINITION STARTS THERE
+
+
+
+
+/*==========================================================================================
+
+								  RULE OF FIVE AND DESTRUCTOR
+
+===========================================================================================*/
+
 template<Comparable K, CopyConstructible V>
-BinaryTree<K, V>::iterator_base::iterator_base(BinaryTree::Node* node) {
-	ptr = node;
+inline BinaryTree<K, V>::BinaryTree(const BinaryTree<K, V>& other)
+{
+	other.forEachHorizontal([&](const K& key, const V& val) {
+		this->insert(key, val);
+		});
+}
+template<Comparable K, CopyConstructible V>
+inline BinaryTree<K, V>::BinaryTree(BinaryTree&& other)
+{
+	this->root = other.root;
+	this->size_ = other.size_;
+	other.root = nullptr;
 }
 
 template<Comparable K, CopyConstructible V>
-inline void BinaryTree<K, V>::iterator_base::copy(const iterator_base& other)
+inline BinaryTree<K, V>& BinaryTree<K, V>::operator=(const BinaryTree& other)
 {
-	this->ptr = other.ptr;
+	if (this != &other) {
+		this->clear();
+		other.forEachHorizontal([&](const K& key, const V& val) {
+			this->insert(key, val);
+			});
+	}
+	return *this;
 }
 
 template<Comparable K, CopyConstructible V>
-inline std::pair<const K&, V&> BinaryTree<K, V>::iterator_base::get() const
+inline BinaryTree<K, V>& BinaryTree<K, V>::operator=(BinaryTree&& other)
 {
-	if (this->ptr == nullptr) throw new std::logic_error("Iterator operation *: can't get the value of the end/rend node");
-	return std::pair<const K&, V&>(this->ptr->key, this->ptr->value);
+	if (this != &other) {
+		this->root = other.root;
+		this->size_ = other.size_;
+		other.root = nullptr;
+	}
+	return *this;
 }
+
+template<Comparable K, CopyConstructible V>
+inline BinaryTree<K, V>::~BinaryTree()
+{
+	clear();
+}
+
+
+/*==========================================================================================
+
+								  INFORMATIONAL OPERATIONS
+
+===========================================================================================*/
+
+template<Comparable K, CopyConstructible V>
+bool BinaryTree<K, V>::contains(const K& key) const {
+	Node* currentNode = root;
+	if (currentNode == nullptr) return false;
+	while (currentNode->key != key) {
+		if (key < currentNode->key)
+			if (currentNode->left != nullptr)
+				currentNode = currentNode->left;
+			else
+				return false;
+		if (key > currentNode->key)
+			if (currentNode->right != nullptr)
+				currentNode = currentNode->right;
+			else
+				return false;
+	}
+	return true;
+}
+
+template<Comparable K, CopyConstructible V>
+size_t BinaryTree<K, V>::size() const {
+	return size_;
+}
+
+template<Comparable K, CopyConstructible V>
+bool BinaryTree<K, V>::empty() const {
+	return size_ == 0;
+}
+
+template<Comparable K, CopyConstructible V>
+inline std::list<K> BinaryTree<K, V>::keys() const
+{
+	std::list<K> keys;
+	if (root == nullptr) return keys;
+	std::stack<Node*> nodes;
+	nodes.push(root);
+	while (!nodes.empty()) {
+		Node* node = nodes.top();
+		nodes.pop();
+		keys.push_back(node->key);
+		if (node->right) nodes.push(node->right);
+		if (node->left) nodes.push(node->left);
+	}
+	return keys;
+}
+
+/*==========================================================================================
+
+								  ACCESS OPERATIONS
+
+===========================================================================================*/
 
 
 template<Comparable K, CopyConstructible V>
@@ -393,87 +549,84 @@ inline BinaryTree<K, V>::const_reverse_iterator BinaryTree<K, V>::crbegin() cons
 	return a;
 }
 
+
 template<Comparable K, CopyConstructible V>
 inline V& BinaryTree<K, V>::operator[](const K& key)
 {
-	auto it = find(key);
-	if (it != end())
-		return (*it).second;
-	else throw std::out_of_range("No such key in the tree");
 
-}
-
-template<Comparable K, CopyConstructible V>
-inline V BinaryTree<K, V>::operator[](const K& key) const
-{
-	auto it = find(key);
-	if (it != cend())
-		return (*it).second;
-	else throw std::out_of_range("No such key in the tree");
-}
-
-template<Comparable K, CopyConstructible V>
-bool BinaryTree<K, V>::empty() const {
-	return size_ == 0;
-}
-
-template<Comparable K, CopyConstructible V>
-size_t BinaryTree<K, V>::size() const {
-	return size_;
-}
-
-template<Comparable K, CopyConstructible V>
-bool BinaryTree<K, V>::contains(const K& key) const {
 	Node* currentNode = root;
-	if (currentNode == nullptr) return false;
-	while (currentNode->key != key) {
-		if (key < currentNode->key)
-			if (currentNode->left != nullptr)
-				currentNode = currentNode->left;
-			else
-				return false;
-		if (key > currentNode->key)
-			if (currentNode->right != nullptr)
-				currentNode = currentNode->right;
-			else
-				return false;
-	}
-	return true;
-}
 
+	if (currentNode == nullptr) {
+		Node* newNode = new Node();
+		newNode->key = key;
+		root = newNode;
+		size_++;
+		return root->value;
+	}
+
+	while (true) {
+		if (key == currentNode->key) {
+			return currentNode->value;
+		}
+		if (key > currentNode->key) {
+			if (currentNode->right == nullptr) {
+				Node* newNode = new Node();
+				newNode->key = key;
+				currentNode->right = newNode;
+				return currentNode->right->value;
+				break;
+			}
+			else {
+				currentNode = currentNode->right;
+				continue;
+			}
+		}
+		if (key < currentNode->key) {
+			if (currentNode->left == nullptr) {
+				Node* newNode = new Node();
+				newNode->key = key;
+				currentNode->left = newNode;
+				return currentNode->left->value;
+				break;
+			}
+			else {
+				currentNode = currentNode->left;
+				continue;
+			}
+		}
+	}
+	size_++;
+}
 
 template<Comparable K, CopyConstructible V>
-inline void BinaryTree<K, V>::forEach(std::function<void(typename BinaryTree<K,V>::Node*)> func) {
-	Node* root = this->root;
-	std::stack<Node*> nodes;
-	while (root != nullptr || !nodes.empty()) {
-		if (!nodes.empty()) {
-			root = nodes.top();
-			nodes.pop();
-			func(root);
-			if (root->right != nullptr)
-				root = root->right;
-			else
-				root = nullptr;
-		}
-		while (root != nullptr) {
-			nodes.push(root);
-			root = root->left;
-		}
-	}
-
+inline V& BinaryTree<K, V>::at(const K& key) {
+	auto it = (find(key));
+	if (it.ptr == nullptr) throw std::out_of_range("operation at: no such key in the tree");
+	return (*it).second;
 }
 
+template<Comparable K, CopyConstructible V>
+inline const V& BinaryTree<K, V>::at(const K& key) const {
+	auto it = (find(key));
+	if (it.ptr == nullptr) throw std::out_of_range("operation at: no such key in the tree");
+	return (*it).second;
+}
+
+/*==========================================================================================
+
+								  MODIFYING OPERATIONS
+
+===========================================================================================*/
 
 template<Comparable K, CopyConstructible V>
 inline bool BinaryTree<K, V>::insert(const K& key, const V& value)
 {
 	Node* currentNode = root;
-	Node* newNode = new Node();
-	newNode->key = key;
-	newNode->value = value;
 
 	if (currentNode == nullptr) {
+		Node* newNode = new Node();
+		newNode->key = key;
+		newNode->value = value;
 		root = newNode;
 		size_++;
 		return true;
@@ -483,6 +636,9 @@ inline bool BinaryTree<K, V>::insert(const K& key, const V& value)
 		if (key == currentNode->key) return false;
 		if (key > currentNode->key) {
 			if (currentNode->right == nullptr) {
+				Node* newNode = new Node();
+				newNode->key = key;
+				newNode->value = value;
 				currentNode->right = newNode;
 				break;
 			}
@@ -493,6 +649,9 @@ inline bool BinaryTree<K, V>::insert(const K& key, const V& value)
 		}
 		if (key < currentNode->key) {
 			if (currentNode->left == nullptr) {
+				Node* newNode = new Node();
+				newNode->key = key;
+				newNode->value = value;
 				currentNode->left = newNode;
 				break;
 			}
@@ -507,7 +666,7 @@ inline bool BinaryTree<K, V>::insert(const K& key, const V& value)
 }
 
 template<Comparable K, CopyConstructible V>
-inline bool BinaryTree<K, V>::remove(const K& key)
+inline bool BinaryTree<K, V>::erase(const K& key)
 {
 	Node* previousNode = nullptr;
 	Node* currentNode = root;
@@ -542,7 +701,14 @@ inline bool BinaryTree<K, V>::remove(const K& key)
 					minimumInRightBranch = minimumInRightBranch->left;
 				}
 				//If minimum node has right child -> replace it on minimum node place
-				if (minimumInRightBranch->right != nullptr) minimumInRightBranchPrev->left = minimumInRightBranch->right;
+				if (minimumInRightBranch->right != nullptr)
+					minimumInRightBranchPrev->right = minimumInRightBranch->right;
+				else {
+					if (minimumInRightBranchPrev->left == minimumInRightBranch)
+						minimumInRightBranchPrev->left = nullptr;
+					else
+						minimumInRightBranchPrev->right = nullptr;
+				}
 				//Replace minimum node on target node place
 				if (previousNode == nullptr) {
 					root = minimumInRightBranch;
@@ -554,7 +720,8 @@ inline bool BinaryTree<K, V>::remove(const K& key)
 						previousNode->right = minimumInRightBranch;
 				}
 				minimumInRightBranch->left = currentNode->left;
-				minimumInRightBranch->right = currentNode->right;
+				if (minimumInRightBranch != currentNode->right)
+					minimumInRightBranch->right = currentNode->right;
 				delete currentNode;
 				--size_;
 				return true;
@@ -614,10 +781,10 @@ template<Comparable K, CopyConstructible V>
 inline void BinaryTree<K, V>::clear()
 {
 	std::stack<Node*> toDelete;
-	forEach([&](Node* node) {
+	forEachInternal([&](Node* node) {
 		toDelete.push(node);
-	});
-	
+		});
+
 	while (!toDelete.empty()) {
 		delete toDelete.top();
 		toDelete.pop();
@@ -626,206 +793,145 @@ inline void BinaryTree<K, V>::clear()
 	size_ = 0;
 }
 
+/*==========================================================================================
+
+                                  PASS THROUGH OPERATIONS
+
+===========================================================================================*/
+
 template<Comparable K, CopyConstructible V>
-inline void BinaryTree<K, V>::print()
-{
-	//создаем массив на количество элементов в зависимости от уровня.
-	//сохраняем глубину и порядковый номер элемента на уровне!!!
+inline void BinaryTree<K, V>::forEachInternal(std::function<void(K&, V&)> func) const {
+	Node* root = this->root;
+	std::stack<Node*> nodes;
+	while (root != nullptr || !nodes.empty()) {
+		if (!nodes.empty()) {
+			root = nodes.top();
+			nodes.pop();
+			func(root->key, root->value);
+			if (root->right != nullptr)
+				root = root->right;
+			else
+				root = nullptr;
+		}
+		while (root != nullptr) {
+			nodes.push(root);
+			root = root->left;
+		}
+	}
 
-	int MAXIMUM_LEVEL = 5;
+}
 
+
+template<Comparable K, CopyConstructible V>
+inline void BinaryTree<K, V>::forEachInternal(std::function<void(typename BinaryTree<K, V>::Node*)> func) {
+	Node* root = this->root;
+	std::stack<Node*> nodes;
+	while (root != nullptr || !nodes.empty()) {
+		if (!nodes.empty()) {
+			root = nodes.top();
+			nodes.pop();
+			func(root);
+			if (root->right != nullptr)
+				root = root->right;
+			else
+				root = nullptr;
+		}
+		while (root != nullptr) {
+			nodes.push(root);
+			root = root->left;
+		}
+	}
+
+}
+
+
+template<Comparable K, CopyConstructible V>
+inline void BinaryTree<K, V>::forEachHorizontalInternal(std::function<void(K& key, V& val, size_t depth, size_t ordinalNumber)> func) const {
 	if (this->root == nullptr) return;
 	Node* root = this->root;
 	size_t depth = 0;
 	size_t ordinalNumber = 0;
-
-	struct triplet {
-		Node* node;
+	struct nodeToGo {
+		Node* root;
 		size_t depth;
 		size_t ordinalNumber;
-		triplet(Node* node, size_t depth, size_t ordinalNumber) {
-			this->node = node; this->depth = depth; this->ordinalNumber = ordinalNumber;
-		}
+		nodeToGo(Node* root_, size_t depth_, size_t ordinalNumber_) : root(root_), depth(depth_), ordinalNumber(ordinalNumber_) {};
 	};
-	
-	std::vector<std::vector<Node*>> vectors;
-	for (int i = 0; i < pow(2,MAXIMUM_LEVEL); i++) {
-		std::vector<Node*> innerVector;
-		for (int j = 0; j < pow(2,MAXIMUM_LEVEL); j++) {
-			innerVector.push_back(nullptr);
-		}
-		vectors.push_back(innerVector);
-	}
-
-	size_t maxDepth;
-	std::queue<triplet> nodes;
+	std::queue<nodeToGo> nodes;
 	do {
 		if (!nodes.empty()) nodes.pop();
-		vectors[depth][ordinalNumber] = root;
-		if (root->left != nullptr) nodes.push(triplet(root->left, depth+1, ordinalNumber*2));
-		if (root->right != nullptr) nodes.push(triplet(root->right, depth+1, ordinalNumber*2+1));
-		maxDepth = depth + 1;
+
+		func(root->key, root->value, depth, ordinalNumber);
+
+		if (root->left != nullptr) nodes.push(nodeToGo(root->left, depth + 1, ordinalNumber * 2));
+		if (root->right != nullptr) nodes.push(nodeToGo(root->right, depth + 1, ordinalNumber * 2 + 1));
 		if (!nodes.empty()) {
-			root = nodes.front().node;
+			root = nodes.front().root;
 			depth = nodes.front().depth;
 			ordinalNumber = nodes.front().ordinalNumber;
 		}
 	} while (!nodes.empty());
-
-	size_t maxKeySize = 3;
-	size_t maxSize = 3;
-	int maxValuesNumber = pow(2, maxDepth);
-	int symbolsInString = maxKeySize * maxValuesNumber + maxValuesNumber; //числа (3 символа) + пробелы (1 символ)
-	for (int i = 0; i <= maxDepth && i<=MAXIMUM_LEVEL; i++) {
-		int thisStringValuesNumber = pow(2, i);
-		for (int j = 0; j < thisStringValuesNumber; j++) {
-			int probelsAfterEveryKey = (symbolsInString - (thisStringValuesNumber * maxKeySize)) / thisStringValuesNumber/2;
-			for (int s = 0; s < probelsAfterEveryKey; s++) std::cout << " ";
-			if (vectors[i][j] == nullptr) {
-				for (int s = 0; s < maxKeySize; s++) std::cout << " ";
-			}
-			else {
-				std::cout << vectors[i][j]->key;
-			}
-			for (int s = 0; s < probelsAfterEveryKey; s++) std::cout << " ";
-		}
-		maxSize *= 2;
-		std::cout << "\n";
-	}
 }
-
 template<Comparable K, CopyConstructible V>
 inline void BinaryTree<K, V>::forEach(std::function<void(const K&, V&)> func) {
-	Node* root = this->root;
-	std::stack<Node*> nodes;
-	while (root != nullptr || !nodes.empty()) {
-		if (!nodes.empty()) {
-			root = nodes.top();
-			nodes.pop();
-			func(root->key, root->value);
-			if (root->right != nullptr)
-				root = root->right;
-			else
-				root = nullptr;
-		}
-		while (root != nullptr) {
-			nodes.push(root);
-			root = root->left;
-		}
-	}
-
+	forEachInternal((std::function<void(K&, V&)>)func);
 }
 
 template<Comparable K, CopyConstructible V>
 inline void BinaryTree<K, V>::forEach(std::function<void(const K&, const V&)> func) const {
-	Node* root = root;
-	std::stack<Node*> nodes;
-	while (root != nullptr || !nodes.empty()) {
-		if (!nodes.empty()) {
-			root = nodes.top();
-			nodes.pop();
-			func(root->key, root->value);
-			if (root->right != nullptr)
-				root = root->right;
-			else
-				root = nullptr;
-		}
-		while (root != nullptr) {
-			nodes.push(root);
-			root = root->left;
-		}
-	}
+	forEachInternal((std::function<void(K&, V&)>)func);
 }
 
 template<Comparable K, CopyConstructible V>
-inline void BinaryTree<K, V>::forEachHorizontal(std::function<void(const K&, V&, size_t)> func) {
-	
-	if (this->root == nullptr) return;
-	Node* root = this->root;
-	size_t depth = 0;
-	std::queue<std::pair<Node*,size_t>> nodes;
-	do {
-		func(root->key, root->value, depth);
-		if (root->left != nullptr) nodes.push(std::make_pair(root->left,depth+1));
-		if (root->right != nullptr) nodes.push(std::make_pair(root->right,depth+1));
-		if (!nodes.empty()) {
-			root = nodes.front().first;
-			depth = nodes.front().second;
-			nodes.pop();
-		}
-	} while (!nodes.empty());
-}
+inline void BinaryTree<K, V>::forEachHorizontal(std::function<void(const K&, const V&)> func) const {
 
+	auto function = ([&](K& key, V& val, size_t depth, size_t ordinalNumber) {
+		func(key, val);
+		});
+	forEachHorizontalInternal(function);
+}
 template<Comparable K, CopyConstructible V>
 inline void BinaryTree<K, V>::forEachHorizontal(std::function<void(const K&, const V&, size_t)> func) const {
-	if (this->root == nullptr) return;
-	Node* root = this->root;
-	size_t depth = 0;
-	std::queue<std::pair<Node*, size_t>> nodes;
-	do {
-		func(root->key, root->value, depth);
-		if (root->left != nullptr) nodes.push(std::make_pair(root->left, depth + 1));
-		if (root->right != nullptr) nodes.push(std::make_pair(root->right, depth + 1));
-		if (!nodes.empty()) {
-			root = nodes.front().first;
-			depth = nodes.front().second;
-			nodes.pop();
-		}
-	} while (!nodes.empty());
-}
 
-
-
-
-template<Comparable K, CopyConstructible V>
-inline BinaryTree<K, V>::BinaryTree(const BinaryTree<K,V>& other)
-{
-	other.forEach([&](const K& key, const V& val) {
-		this->insert(key, val);
-	});
-}
-template<Comparable K, CopyConstructible V>
-inline BinaryTree<K, V>::BinaryTree(BinaryTree&& other)
-{
-	this->root = other.root;
-	this->size_ = other.size_;
-	other.root = nullptr;
-}
-template<Comparable K, CopyConstructible V>
-inline BinaryTree<K, V>::~BinaryTree()
-{
-	clear();
-}
-
-template<Comparable K, CopyConstructible V>
-inline BinaryTree<K,V>& BinaryTree<K, V>::operator=(const BinaryTree& other)
-{
-	if (this != &other) {
-		this->clear();
-		other.forEach([&](const K& key, const V& val){
-			this->insert(key, val);
+	auto function = ([&](K& key, V& val, size_t depth, size_t ordinalNumber) {
+		func(key, val, depth);
 		});
-	}
-	return *this;
+	forEachHorizontalInternal(function);
+}
+template<Comparable K, CopyConstructible V>
+inline void BinaryTree<K, V>::forEachHorizontal(std::function<void(const K&, const V&, size_t, size_t)> func) const {
+
+	auto function = ([&](K& key, V& val, size_t depth, size_t ordinalNumber) {
+		func(key, val, depth, ordinalNumber);
+		});
+	forEachHorizontalInternal(function);
+}
+
+/*==========================================================================================
+
+								  ITERATORS REALISATION
+
+===========================================================================================*/
+
+
+template<Comparable K, CopyConstructible V>
+BinaryTree<K, V>::iterator_base::iterator_base(BinaryTree::Node* node) {
+	ptr = node;
 }
 
 template<Comparable K, CopyConstructible V>
-inline BinaryTree<K,V>& BinaryTree<K, V>::operator=(BinaryTree&& other)
+inline void BinaryTree<K, V>::iterator_base::copy(const iterator_base& other)
 {
-	if (this != &other) {
-		this->root = other.root;
-		this->size_ = other.size_;
-		other.root = nullptr;
-	}
-	return *this;
+	this->ptr = other.ptr;
 }
-/*
-template<Comparable K, CopyConstructible V>
-bool operator==(const typename BinaryTree<K,V>::iterator_base& one, const typename BinaryTree<K, V>::iterator_base& two) { return true; };
 
 template<Comparable K, CopyConstructible V>
-std::strong_ordering operator<=>(const typename BinaryTree<K, V>::reverse_iterator_base& one, const typename BinaryTree<K, V>::reverse_iterator_base& two) { return std::strong_ordering::equal; };
-*/
+inline std::pair<const K&, V&> BinaryTree<K, V>::iterator_base::get() const
+{
+	if (this->ptr == nullptr) throw new std::logic_error("Iterator operation *: can't get the value of the end/rend node");
+	return std::pair<const K&, V&>(this->ptr->key, this->ptr->value);
+}
+
 
 template<Comparable K, CopyConstructible V>
 inline void BinaryTree<K, V>::forward_iterator_base::goForward()

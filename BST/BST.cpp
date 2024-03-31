@@ -3,20 +3,57 @@
 
 #include <iostream>
 #include "BinaryTree.h"
-
+#include <map>
+#include <list>
 int main()
 {
+
+    std::map<std::string, unsigned> products;
+
+    // установка значений
+    products["bread"] = 30;
+    products["milk"] = 80;
+    //products["apple"];
+    const auto newMap = products;
+
+    //std::cout << newMap["apple"];
+    
     struct meow {
         int a;
     };
-    BinaryTree<int, int> s;
-    s.insert(4, 5);
+    BinaryTree<int, int>::forw s;
+    s.keys
+    s.insert(6, 5);
     s.insert(2, 0);
     s.insert(3, 11);
-    s.insert(5, 15);
+    s.insert(11, 15);
+    s.insert(8,0);
+    //s.insert(13, 0);
+    s.insert(9,0);
+    //s.insert(13, 0);
+    //s.insert(12,0);
+    s.erase(11);
     //auto it = s.begin();
-    
-    for (auto i = s.rbegin(); i < s.rend(); i++) std::cout << (*i).first << " ";
+    auto list = s.keys();
+
+    for (auto it = list.begin(); it != list.end(); it++) {
+        std::cout << *it <<" ";
+    }
+
+    s.forEach([&](int key, int& val) {
+        std::cout << "[" << key << "][" << val << "] ";
+        });
+    //s.print();
+    std::cout << "\n\n";
+    int depth_ = 0;
+    s.forEach([&](int key, int& val) {
+        std::cout << "[" << key << "][" << val << "] ";
+    });
+    std::cout << "\n";
+    const BinaryTree<int, int> as = s;
+    as.forEachHorizontal([&](const int& key, const int& val, size_t depth, size_t ordinalNumber) {
+        std::cout << depth<<":"<< key << " ";
+     });
     
     
 
