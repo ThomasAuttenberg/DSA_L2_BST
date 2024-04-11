@@ -26,6 +26,11 @@ concept CopyConstructible = std::is_copy_constructible<T>::value;
 template <Comparable K, CopyConstructible V>
 class BinaryTree
 {
+public:
+	class const_iterator;
+	class iterator;
+	class reverse_iterator;
+	class const_reverse_iterator;
 private:
 
 	struct Node {
@@ -42,11 +47,12 @@ private:
 	void forEachInternal(std::function<void(Node*)>);
 	void forEachHorizontalInternal(std::function<void(K&, V&, size_t depth, size_t ordinalNumber)>) const;
 
+	Node* findRecursive(const K& key, Node* node, std::stack<Node*>& wayFromRoot) const;
+	bool eraseRecursive(const K& key, Node* node, Node* previousNode);
+	bool insertRecursive(const K& key, const V& value, Node* node);
+	Node* findAndCreateIfNotExists(const K& key, Node* node);
+	
 public:
-	class const_iterator;
-	class iterator;
-	class reverse_iterator;
-	class const_reverse_iterator;
 	
 	/*==========================================
 	          RULE OF FIVE + DESTRUCTOR
@@ -120,6 +126,7 @@ public:
 
 	// Inserts the new key:value pair in the tree
 	bool insert(const K&, const V&);
+	bool insert(std::pair<const K&, const V&> pair);
 	
 	// Removes the leaf with the corresponding key
 	bool erase(const K&);
@@ -288,6 +295,201 @@ public:
 
 
 
+/*==========================================================================================
+
+								  SUPPORTING RECURSIVE METHODS
+
+===========================================================================================*/
+
+template<Comparable K, CopyConstructible V>
+inline BinaryTree<K, V>::Node* BinaryTree<K, V>::findRecursive(const K& key, Node* node, std::stack<Node*>& wayFromRoot) const
+{
+	if (node == nullptr) 
+		return nullptr;
+	if (node->key == key)
+		return node;
+	if (key > node->key) {
+		wayFromRoot.push(node);
+		return findRecursive(key, node->right, wayFromRoot);
+	}
+	else {
+		wayFromRoot.push(node);
+		return findRecursive(key, node->left,wayFromRoot);
+	}
+}
+
+template<Comparable K, CopyConstructible V>
+inline bool BinaryTree<K, V>::eraseRecursive(const K& key, Node* currentNode, Node* previousNode)
+{
+	if (currentNode == nullptr) return false;
+	if (key == currentNode->key) {
+		//No childs:
+		if (currentNode->left == nullptr && currentNode->right == nullptr) {
+			//If target node is root
+			if (previousNode == nullptr) {
+				root = nullptr;
+			}
+			else {
+
+				if (previousNode->left == currentNode)
+					previousNode->left = nullptr;
+				else
+					previousNode->right = nullptr;
+
+				delete currentNode;
+				--size_;
+				return true;
+			}
+		}
+		//Both childs exist
+		if (currentNode->left != nullptr && currentNode->right != nullptr) {
+			Node* minimumInRightBranch = currentNode->right;
+			Node* minimumInRightBranchPrev = currentNode;
+			//Finding minimum in the right branch
+			while (minimumInRightBranch->left != nullptr) {
+				minimumInRightBranchPrev = minimumInRightBranch;
+				minimumInRightBranch = minimumInRightBranch->left;
+			}
+			//If minimum node has right child -> replace it on minimum node place
+			if (minimumInRightBranch->right != nullptr)
+				minimumInRightBranchPrev->right = minimumInRightBranch->right;
+			else {
+				if (minimumInRightBranchPrev->left == minimumInRightBranch)
+					minimumInRightBranchPrev->left = nullptr;
+				else
+					minimumInRightBranchPrev->right = nullptr;
+			}
+			//Replace minimum node on target node place
+			if (previousNode == nullptr) {
+				root = minimumInRightBranch;
+			}
+			else {
+				if (previousNode->left == currentNode)
+					previousNode->left = minimumInRightBranch;
+				else
+					previousNode->right = minimumInRightBranch;
+			}
+			minimumInRightBranch->left = currentNode->left;
+			if (minimumInRightBranch != currentNode->right)
+				minimumInRightBranch->right = currentNode->right;
+			delete currentNode;
+			--size_;
+			return true;
+		}
+		//If there is only left child
+		if (currentNode->left != nullptr) {
+			if (previousNode != nullptr) {
+				if (previousNode->left == currentNode)
+					previousNode->left = currentNode->left;
+				else
+					previousNode->right = currentNode->left;
+			}
+			else {
+				root = currentNode->left;
+			}
+		}
+		//If there is only right child
+		else {
+			if (previousNode != nullptr) {
+				if (previousNode->left == currentNode)
+					previousNode->left = currentNode->right;
+				else
+					previousNode->right = currentNode->right;
+			}
+			else {
+				root = currentNode->right;
+			}
+		}
+		delete currentNode;
+		--size_;
+		return true;
+	}
+	else {
+		previousNode = currentNode;
+		if (key < currentNode->key) {
+			if (currentNode->left != nullptr) {
+				eraseRecursive(key, currentNode->left, currentNode);
+			}
+			else {
+				return false;
+			}
+		}
+		else {
+			if (currentNode->right != nullptr) {
+				eraseRecursive(key, currentNode->right, currentNode);
+			}
+			else {
+				return false;
+			}
+		}
+	}
+}
+
+template<Comparable K, CopyConstructible V>
+inline bool BinaryTree<K, V>::insertRecursive(const K& key, const V& value, Node* node)
+{
+	
+		if (key == node->key) return false;
+		if (key > node->key) {
+			if (node->right == nullptr) {
+				Node* newNode;
+				newNode = new Node();
+				newNode->key = key;
+				newNode->value = value;
+				node->right = newNode;
+			}
+			else {
+				return insertRecursive(key, value, node->right);
+			}
+		}
+		if (key < node->key) {
+			if (node->left == nullptr) {
+				Node* newNode;
+				newNode = new Node();
+				newNode->key = key;
+				newNode->value = value;
+				node->left = newNode;
+			}
+			else {
+				return insertRecursive(key, value, node->left);
+			}
+		}
+
+	size_++;
+	return true;
+}
+
+template<Comparable K, CopyConstructible V>
+inline BinaryTree<K, V>::Node* BinaryTree<K, V>::findAndCreateIfNotExists(const K& key, Node* node)
+{
+	Node* newNode = nullptr;
+	if (key == node->key) return node;
+	if (key > node->key) {
+		if (node->right == nullptr) {
+			newNode = new Node();
+			newNode->key = key;
+			newNode->value = V();
+			node->right = newNode;
+		}
+		else {
+			return findAndCreateIfNotExists(key, node->right);
+		}
+	}
+	if (key < node->key) {
+		if (node->left == nullptr) {
+			newNode = new Node();
+			newNode->key = key;
+			newNode->value = V();
+			node->left = newNode;
+		}
+		else {
+			return findAndCreateIfNotExists(key, node->left);
+		}
+	}
+
+	size_++;
+	return newNode;
+}
 
 /*==========================================================================================
 
@@ -348,21 +550,10 @@ inline BinaryTree<K, V>::~BinaryTree()
 
 template<Comparable K, CopyConstructible V>
 bool BinaryTree<K, V>::contains(const K& key) const {
-	Node* currentNode = root;
-	if (currentNode == nullptr) return false;
-	while (currentNode->key != key) {
-		if (key < currentNode->key)
-			if (currentNode->left != nullptr)
-				currentNode = currentNode->left;
-			else
-				return false;
-		if (key > currentNode->key)
-			if (currentNode->right != nullptr)
-				currentNode = currentNode->right;
-			else
-				return false;
-	}
-	return true;
+	if (findRecursive(key,root))
+		return true;
+	else
+		return false;
 }
 
 template<Comparable K, CopyConstructible V>
@@ -401,41 +592,21 @@ inline std::list<K> BinaryTree<K, V>::keys() const
 
 template<Comparable K, CopyConstructible V>
 BinaryTree<K, V>::iterator BinaryTree<K, V>::find(const K& key) {
-	Node* currentNode = root;
-	if (currentNode == nullptr) return iterator(nullptr);
-	while (currentNode->key != key) {
-		if (key < currentNode->key)
-			if (currentNode->left != nullptr)
-				currentNode = currentNode->left;
-			else
-				return iterator(nullptr);
-		if (key > currentNode->key)
-			if (currentNode->right != nullptr)
-				currentNode = currentNode->right;
-			else
-				return iterator(nullptr);
-	}
-	return iterator(currentNode);
+	std::stack<Node*> wayFromRoot;
+	Node* result = findRecursive(key, root,wayFromRoot);
+	iterator resultinIterator(result);
+	resultinIterator.nodes = wayFromRoot;
+	return resultinIterator;
 }
 
 
 template<Comparable K, CopyConstructible V>
 BinaryTree<K, V>::const_iterator BinaryTree<K, V>::find(const K& key) const {
-	Node* currentNode = root;
-	if (currentNode == nullptr) return const_iterator(nullptr);
-	while (currentNode->key != key) {
-		if (key < currentNode->key)
-			if (currentNode->left != nullptr)
-				currentNode = currentNode->left;
-			else
-				return false;
-		if (key > currentNode->key)
-			if (currentNode->right != nullptr)
-				currentNode = currentNode->right;
-			else
-				return false;
-	}
-	return const_iterator(currentNode);
+	std::stack<Node*> wayFromRoot;
+	Node* result = findRecursive(key, root, wayFromRoot);
+	const_iterator resultinIterator(result);
+	resultinIterator.nodes = wayFromRoot;
+	return resultinIterator;
 }
 
 template<Comparable K, CopyConstructible V>
@@ -564,38 +735,7 @@ inline V& BinaryTree<K, V>::operator[](const K& key)
 		return root->value;
 	}
 
-	while (true) {
-		if (key == currentNode->key) {
-			return currentNode->value;
-		}
-		if (key > currentNode->key) {
-			if (currentNode->right == nullptr) {
-				Node* newNode = new Node();
-				newNode->key = key;
-				currentNode->right = newNode;
-				return currentNode->right->value;
-				break;
-			}
-			else {
-				currentNode = currentNode->right;
-				continue;
-			}
-		}
-		if (key < currentNode->key) {
-			if (currentNode->left == nullptr) {
-				Node* newNode = new Node();
-				newNode->key = key;
-				currentNode->left = newNode;
-				return currentNode->left->value;
-				break;
-			}
-			else {
-				currentNode = currentNode->left;
-				continue;
-			}
-		}
-	}
-	size_++;
+	return findAndCreateIfNotExists(key, root)->value;
 }
 
 template<Comparable K, CopyConstructible V>
@@ -632,149 +772,13 @@ inline bool BinaryTree<K, V>::insert(const K& key, const V& value)
 		return true;
 	}
 
-	while (true) {
-		if (key == currentNode->key) return false;
-		if (key > currentNode->key) {
-			if (currentNode->right == nullptr) {
-				Node* newNode = new Node();
-				newNode->key = key;
-				newNode->value = value;
-				currentNode->right = newNode;
-				break;
-			}
-			else {
-				currentNode = currentNode->right;
-				continue;
-			}
-		}
-		if (key < currentNode->key) {
-			if (currentNode->left == nullptr) {
-				Node* newNode = new Node();
-				newNode->key = key;
-				newNode->value = value;
-				currentNode->left = newNode;
-				break;
-			}
-			else {
-				currentNode = currentNode->left;
-				continue;
-			}
-		}
-	}
-	size_++;
-	return true;
+	return insertRecursive(key, value, root);
 }
 
 template<Comparable K, CopyConstructible V>
 inline bool BinaryTree<K, V>::erase(const K& key)
 {
-	Node* previousNode = nullptr;
-	Node* currentNode = root;
-	while (true) {
-		//Found key in currentNode
-		if (key == currentNode->key) {
-			//No childs:
-			if (currentNode->left == nullptr && currentNode->right == nullptr) {
-				//If target node is root
-				if (previousNode == nullptr) {
-					root = nullptr;
-				}
-				else {
-
-					if (previousNode->left == currentNode)
-						previousNode->left = nullptr;
-					else
-						previousNode->right = nullptr;
-
-					delete currentNode;
-					--size_;
-					return true;
-				}
-			}
-			//Both childs exist
-			if (currentNode->left != nullptr && currentNode->right != nullptr) {
-				Node* minimumInRightBranch = currentNode->right;
-				Node* minimumInRightBranchPrev = currentNode;
-				//Finding minimum in the right branch
-				while (minimumInRightBranch->left != nullptr) {
-					minimumInRightBranchPrev = minimumInRightBranch;
-					minimumInRightBranch = minimumInRightBranch->left;
-				}
-				//If minimum node has right child -> replace it on minimum node place
-				if (minimumInRightBranch->right != nullptr)
-					minimumInRightBranchPrev->right = minimumInRightBranch->right;
-				else {
-					if (minimumInRightBranchPrev->left == minimumInRightBranch)
-						minimumInRightBranchPrev->left = nullptr;
-					else
-						minimumInRightBranchPrev->right = nullptr;
-				}
-				//Replace minimum node on target node place
-				if (previousNode == nullptr) {
-					root = minimumInRightBranch;
-				}
-				else {
-					if (previousNode->left == currentNode)
-						previousNode->left = minimumInRightBranch;
-					else
-						previousNode->right = minimumInRightBranch;
-				}
-				minimumInRightBranch->left = currentNode->left;
-				if (minimumInRightBranch != currentNode->right)
-					minimumInRightBranch->right = currentNode->right;
-				delete currentNode;
-				--size_;
-				return true;
-			}
-			//If there is only left child
-			if (currentNode->left != nullptr) {
-				if (previousNode != nullptr) {
-					if (previousNode->left == currentNode)
-						previousNode->left = currentNode->left;
-					else
-						previousNode->right = currentNode->left;
-				}
-				else {
-					root = currentNode->left;
-				}
-			}
-			//If there is only right child
-			else {
-				if (previousNode != nullptr) {
-					if (previousNode->left == currentNode)
-						previousNode->left = currentNode->right;
-					else
-						previousNode->right = currentNode->right;
-				}
-				else {
-					root = currentNode->right;
-				}
-			}
-			delete currentNode;
-			--size_;
-			return true;
-		}
-		// Key is not equal -> continue search
-		else {
-			previousNode = currentNode;
-			if (key < currentNode->key) {
-				if (currentNode->left != nullptr) {
-					currentNode = currentNode->left;
-				}
-				else {
-					return false;
-				}
-			}
-			else {
-				if (currentNode->right != nullptr) {
-					currentNode = currentNode->right;
-				}
-				else {
-					return false;
-				}
-			}
-		}
-	}
+	return eraseRecursive(key, root, nullptr);
 }
 
 template<Comparable K, CopyConstructible V>
@@ -783,7 +787,7 @@ inline void BinaryTree<K, V>::clear()
 	std::stack<Node*> toDelete;
 	forEachInternal([&](Node* node) {
 		toDelete.push(node);
-		});
+	});
 
 	while (!toDelete.empty()) {
 		delete toDelete.top();
@@ -951,13 +955,15 @@ inline void BinaryTree<K, V>::forward_iterator_base::goForward()
 
 	}
 	// If there is no right nodes : go to the first parent with the bigger key
-	while (!this->nodes.empty() && this->nodes.top()->key < this->ptr->key) {
-		this->nodes.pop();
+	std::stack<Node*> nodesTemp = this->nodes;
+	while (!nodesTemp.empty() && nodesTemp.top()->key < this->ptr->key) {
+		nodesTemp.pop();
 	}
 	// If that parent exists set iterator to it
-	if (!this->nodes.empty()) {
-		this->ptr = this->nodes.top();
-		this->nodes.pop();
+	if (!nodesTemp.empty()) {
+		this->ptr = nodesTemp.top();
+		nodesTemp.pop();
+		this->nodes = nodesTemp;
 	}
 	// If that parent doesn't exists: we are in the end node
 	else {
@@ -976,6 +982,9 @@ inline void BinaryTree<K, V>::forward_iterator_base::goBackward()
 			this->nodes.pop();
 			return;
 		}
+		else {
+			throw std::logic_error("Iterator going back operation: can't go through the begin node");
+		}
 	}
 
 	// Get the left node if it's possible
@@ -991,13 +1000,15 @@ inline void BinaryTree<K, V>::forward_iterator_base::goBackward()
 
 	}
 	// If there is no right nodes : go to the first parent with the less key
-	while (!this->nodes.empty() && this->nodes.top()->key > this->ptr->key) {
-		this->nodes.pop();
+	std::stack<Node*> nodesTemp = this->nodes;
+	while (!nodesTemp.empty() && nodesTemp.top()->key > this->ptr->key) {
+		nodesTemp.pop();
 	}
 	// If that parent exists set iterator to it
-	if (!this->nodes.empty()) {
-		this->ptr = this->nodes.top();
-		this->nodes.pop();
+	if (!nodesTemp.empty()) {
+		this->ptr = nodesTemp.top();
+		nodesTemp.pop();
+		this->nodes = nodesTemp;
 	}
 	// If that parent doesn't exists: we are in the begin node
 	else {
@@ -1023,13 +1034,15 @@ inline void BinaryTree<K, V>::reverse_iterator_base::goForward()
 
 	}
 	// If there is no right nodes : go to the first parent with the less key
-	while (!this->nodes.empty() && this->nodes.top()->key > this->ptr->key) {
-		this->nodes.pop();
+	std::stack<Node*> nodesTemp = this->nodes;
+	while (!nodesTemp.empty() && nodesTemp.top()->key > this->ptr->key) {
+		nodesTemp.pop();
 	}
 	// If that parent exists set iterator to it
-	if (!this->nodes.empty()) {
-		this->ptr = this->nodes.top();
-		this->nodes.pop();
+	if (!nodesTemp.empty()) {
+		this->ptr = nodesTemp.top();
+		nodesTemp.pop();
+		this->nodes = nodesTemp;
 	}
 	// If that parent doesn't exists: we are in the end node
 	else {
@@ -1047,6 +1060,9 @@ inline void BinaryTree<K, V>::reverse_iterator_base::goBackward()
 			this->nodes.pop();
 			return;
 		}
+		else {
+			throw std::logic_error("Reverse iterator going back operation: can't go through the rbegin node");
+		}
 	}
 
 	// Get the right node if it's possible
@@ -1062,16 +1078,360 @@ inline void BinaryTree<K, V>::reverse_iterator_base::goBackward()
 
 	}
 	// If there is no right nodes : go to the first parent with the bigger key
-	while (!this->nodes.empty() && this->nodes.top()->key < this->ptr->key) {
-		this->nodes.pop();
+	std::stack<Node*> nodesTemp = this->nodes;
+	while (!nodesTemp.empty() && nodesTemp.top()->key < this->ptr->key) {
+		nodesTemp.pop();
 	}
 	// If that parent exists set iterator to it
-	if (!this->nodes.empty()) {
-		this->ptr = this->nodes.top();
-		this->nodes.pop();
+	if (!nodesTemp.empty()) {
+		this->ptr = nodesTemp.top();
+		nodesTemp.pop();
+		this->nodes = nodesTemp;
 	}
 	// If that parent doesn't exists: we are in the begin node
 	else {
 		throw std::logic_error("Reverse iterator going back operation: can't go through the rbegin node");
 	}
 }
+
+
+/*
+
+template<Comparable K, CopyConstructible V>
+inline bool BinaryTree<K, V>::erase(const K& key)
+{
+	Node* previousNode = nullptr;
+	Node* currentNode = root;
+	while (true) {
+		//Found key in currentNode
+		if (key == currentNode->key) {
+			//No childs:
+			if (currentNode->left == nullptr && currentNode->right == nullptr) {
+				//If target node is root
+				if (previousNode == nullptr) {
+					root = nullptr;
+				}
+				else {
+
+					if (previousNode->left == currentNode)
+						previousNode->left = nullptr;
+					else
+						previousNode->right = nullptr;
+
+					delete currentNode;
+					--size_;
+					return true;
+				}
+			}
+			//Both childs exist
+			if (currentNode->left != nullptr && currentNode->right != nullptr) {
+				Node* minimumInRightBranch = currentNode->right;
+				Node* minimumInRightBranchPrev = currentNode;
+				//Finding minimum in the right branch
+				while (minimumInRightBranch->left != nullptr) {
+					minimumInRightBranchPrev = minimumInRightBranch;
+					minimumInRightBranch = minimumInRightBranch->left;
+				}
+				//If minimum node has right child -> replace it on minimum node place
+				if (minimumInRightBranch->right != nullptr)
+					minimumInRightBranchPrev->right = minimumInRightBranch->right;
+				else {
+					if (minimumInRightBranchPrev->left == minimumInRightBranch)
+						minimumInRightBranchPrev->left = nullptr;
+					else
+						minimumInRightBranchPrev->right = nullptr;
+				}
+				//Replace minimum node on target node place
+				if (previousNode == nullptr) {
+					root = minimumInRightBranch;
+				}
+				else {
+					if (previousNode->left == currentNode)
+						previousNode->left = minimumInRightBranch;
+					else
+						previousNode->right = minimumInRightBranch;
+				}
+				minimumInRightBranch->left = currentNode->left;
+				if (minimumInRightBranch != currentNode->right)
+					minimumInRightBranch->right = currentNode->right;
+				delete currentNode;
+				--size_;
+				return true;
+			}
+			//If there is only left child
+			if (currentNode->left != nullptr) {
+				if (previousNode != nullptr) {
+					if (previousNode->left == currentNode)
+						previousNode->left = currentNode->left;
+					else
+						previousNode->right = currentNode->left;
+				}
+				else {
+					root = currentNode->left;
+				}
+			}
+			//If there is only right child
+			else {
+				if (previousNode != nullptr) {
+					if (previousNode->left == currentNode)
+						previousNode->left = currentNode->right;
+					else
+						previousNode->right = currentNode->right;
+				}
+				else {
+					root = currentNode->right;
+				}
+			}
+			delete currentNode;
+			--size_;
+			return true;
+		}
+		// Key is not equal -> continue search
+		else {
+			previousNode = currentNode;
+			if (key < currentNode->key) {
+				if (currentNode->left != nullptr) {
+					currentNode = currentNode->left;
+				}
+				else {
+					return false;
+				}
+			}
+			else {
+				if (currentNode->right != nullptr) {
+					currentNode = currentNode->right;
+				}
+				else {
+					return false;
+				}
+			}
+		}
+	}
+}
+
+template<Comparable K, CopyConstructible V>
+inline V& BinaryTree<K, V>::operator[](const K& key)
+{
+
+	Node* currentNode = root;
+
+	if (currentNode == nullptr) {
+		Node* newNode = new Node();
+		newNode->key = key;
+		root = newNode;
+		size_++;
+		return root->value;
+	}
+
+	while (true) {
+		if (key == currentNode->key) {
+			return currentNode->value;
+		}
+		if (key > currentNode->key) {
+			if (currentNode->right == nullptr) {
+				Node* newNode = new Node();
+				newNode->key = key;
+				currentNode->right = newNode;
+				return currentNode->right->value;
+				break;
+			}
+			else {
+				currentNode = currentNode->right;
+				continue;
+			}
+		}
+		if (key < currentNode->key) {
+			if (currentNode->left == nullptr) {
+				Node* newNode = new Node();
+				newNode->key = key;
+				currentNode->left = newNode;
+				return currentNode->left->value;
+				break;
+			}
+			else {
+				currentNode = currentNode->left;
+				continue;
+			}
+		}
+	}
+	size_++;
+}
+
+template<Comparable K, CopyConstructible V>
+BinaryTree<K, V>::iterator BinaryTree<K, V>::find(const K& key) {
+	Node* currentNode = root;
+	if (currentNode == nullptr) return iterator(nullptr);
+	while (currentNode->key != key) {
+		if (key < currentNode->key)
+			if (currentNode->left != nullptr)
+				currentNode = currentNode->left;
+			else
+				return iterator(nullptr);
+		if (key > currentNode->key)
+			if (currentNode->right != nullptr)
+				currentNode = currentNode->right;
+			else
+				return iterator(nullptr);
+	}
+	return iterator(currentNode);
+}
+
+
+template<Comparable K, CopyConstructible V>
+inline BinaryTree<K, V>::iterator BinaryTree<K, V>::end()
+{
+	if (this->root == nullptr) return iterator();
+	iterator a;
+	Node* currentNode = this->root;
+	while (currentNode) {
+		a.nodes.push(currentNode);
+		currentNode = currentNode->right;
+	}
+	a.ptr = currentNode;
+	return a;
+}
+
+template<Comparable K, CopyConstructible V>
+inline BinaryTree<K, V>::const_iterator BinaryTree<K, V>::cend() const
+{
+	if (this->root == nullptr) return iterator();
+	iterator a;
+	Node* currentNode = this->root;
+	while (currentNode) {
+		a.nodes.push(currentNode);
+		currentNode = currentNode->right;
+	}
+	a.ptr = currentNode;
+	return a;
+}
+
+template<Comparable K, CopyConstructible V>
+inline BinaryTree<K, V>::iterator BinaryTree<K, V>::begin()
+{
+	if (this->root == nullptr) return iterator();
+	iterator a;
+	Node* currentNode = this->root;
+	while (currentNode->left) {
+		a.nodes.push(currentNode);
+		currentNode = currentNode->left;
+	}
+	a.ptr = currentNode;
+	return a;
+}
+template<Comparable K, CopyConstructible V>
+inline BinaryTree<K, V>::const_iterator BinaryTree<K, V>::cbegin() const
+{
+	const_iterator a;
+	Node* currentNode = this->root;
+	while (currentNode->left) {
+		a.nodes.push(currentNode);
+		currentNode = currentNode->left;
+	}
+	a.ptr = currentNode;
+	return a;
+
+}
+
+template<Comparable K, CopyConstructible V>
+inline BinaryTree<K, V>::reverse_iterator BinaryTree<K, V>::rend()
+{
+	if (this->root == nullptr) return reverse_iterator();
+	reverse_iterator a;
+	Node* currentNode = this->root;
+	while (currentNode) {
+		a.nodes.push(currentNode);
+		currentNode = currentNode->left;
+	}
+	a.ptr = currentNode;
+	return a;
+}
+
+template<Comparable K, CopyConstructible V>
+inline BinaryTree<K, V>::const_reverse_iterator BinaryTree<K, V>::crend() const
+{
+	if (this->root == nullptr) return reverse_iterator();
+	reverse_iterator a;
+	Node* currentNode = this->root;
+	while (currentNode) {
+		a.nodes.push(currentNode);
+		currentNode = currentNode->left;
+	}
+	a.ptr = currentNode;
+	return a;
+}
+
+template<Comparable K, CopyConstructible V>
+inline BinaryTree<K, V>::reverse_iterator BinaryTree<K, V>::rbegin()
+{
+	if (this->root == nullptr) return reverse_iterator();
+	reverse_iterator a;
+	Node* currentNode = this->root;
+	while (currentNode->right) {
+		a.nodes.push(currentNode);
+		currentNode = currentNode->right;
+	}
+	a.ptr = currentNode;
+	return a;
+}
+
+template<Comparable K, CopyConstructible V>
+inline BinaryTree<K, V>::const_reverse_iterator BinaryTree<K, V>::crbegin() const
+{
+	if (this->root == nullptr) return reverse_iterator();
+	reverse_iterator a;
+	Node* currentNode = this->root;
+	while (currentNode->right) {
+		a.nodes.push(currentNode);
+		currentNode = currentNode->right;
+	}
+	a.ptr = currentNode;
+	return a;
+}
+
+template<Comparable K, CopyConstructible V>
+inline bool BinaryTree<K, V>::insert(const K& key, const V& value)
+{
+	Node* currentNode = root;
+
+	if (currentNode == nullptr) {
+		Node* newNode = new Node();
+		newNode->key = key;
+		newNode->value = value;
+		root = newNode;
+		size_++;
+		return true;
+	}
+
+	while (true) {
+		if (key == currentNode->key) return false;
+		if (key > currentNode->key) {
+			if (currentNode->right == nullptr) {
+				Node* newNode = new Node();
+				newNode->key = key;
+				newNode->value = value;
+				currentNode->right = newNode;
+				break;
+			}
+			else {
+				currentNode = currentNode->right;
+				continue;
+			}
+		}
+		if (key < currentNode->key) {
+			if (currentNode->left == nullptr) {
+				Node* newNode = new Node();
+				newNode->key = key;
+				newNode->value = value;
+				currentNode->left = newNode;
+				break;
+			}
+			else {
+				currentNode = currentNode->left;
+				continue;
+			}
+		}
+	}
+	size_++;
+	return true;
+}
+*/
