@@ -21,8 +21,8 @@ int main()
     struct meow {
         int a;
     };
-    BinaryTree<int, int>::forw s;
-    s.keys
+    BinaryTree<int, int> s;
+    s.keys();
     s.insert(6, 5);
     s.insert(2, 0);
     s.insert(3, 11);
