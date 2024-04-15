@@ -8,9 +8,185 @@
 #include "Menu.h"
 #include <conio.h>
 #include <random>
+#include <time.h>
+
+using namespace std;
+typedef unsigned long long INT_64;
+
+//переменная и константы генератора LineRand()
+static INT_64 RRand = 15750;
+const INT_64 mRand = (1 << 63) - 1;
+const INT_64 aRand = 6364136223846793005;
+const INT_64 cRand = 1442695040888963407;
+//функция установки первого случайного числа от часов
+//компьютера
+void sRand() {
+    srand(time(0));
+    RRand = (INT_64)rand();
+}
+//функция генерации случайного числа
+//линейный конгруэнтный генератор Xi+1=(a*Xi+c)%m
+//habr.com/ru/post/208178
+INT_64 LineRand()
+{
+    INT_64 y1, y2;
+    y1 = (aRand * RRand + cRand) % mRand;
+    y2 = (aRand * y1 + cRand) % mRand;
+    RRand = y1 & 0xFFFFFFFF00000000LL ^ (y2 &
+        0xFFFFFFFF00000000LL) >> 32;
+    return RRand;
+}
+
+
+void test_rand(int n)
+{
+    //создание дерева для 64 – разрядных ключей типа INT_64
+    BinaryTree< INT_64, int > tree;
+    //массив для ключей, которые присутствуют в дереве
+    INT_64* m = new INT_64[n];
+    //установка первого случайного числа
+    sRand();
+    //заполнение дерева и массива элементами
+    //со случайными ключами
+    for (int i = 0; i < n; i++)
+    {
+        m[i] = LineRand();
+        tree.insert(m[i], 1);
+    }
+    //вывод размера дерева до теста
+    std::cout << "items count:" << tree.size() << std::endl;
+    //обнуление счётчиков трудоёмкости вставки,
+    //удаления и поиска
+    double I = 0;
+    double D = 0;
+    double S = 0;
+    //генерация потока операций, 10% - промахи операций
+    for (int i = 0; i < n / 2; i++)
+        if (i % 10 == 0) //10% промахов
+        {
+            tree.erase(LineRand());
+            D += tree.getLastOpPassedNodesNum();
+            tree.insert(m[rand() % n], 1);
+            I += tree.getLastOpPassedNodesNum();
+            try {
+                tree.at(LineRand());
+                S += tree.getLastOpPassedNodesNum();
+            }
+            //обработка исключения при ошибке операции поиска
+            catch (...) { S += tree.getLastOpPassedNodesNum(); }
+        }
+        else //90% успешных операций
+        {
+            int ind = rand() % n;
+            tree.erase(m[ind]);
+            D += tree.getLastOpPassedNodesNum();
+            INT_64 key = LineRand();
+            tree.insert(key, 1);
+            I += tree.getLastOpPassedNodesNum();
+            m[ind] = key;
+            try {
+                tree.at(m[rand() % n]);
+                S += tree.getLastOpPassedNodesNum();
+            }
+            //обработка исключения при ошибке операции поиска
+            catch (...) { S += tree.getLastOpPassedNodesNum(); }
+        } //конец теста
+       //вывод результатов:
+       //вывод размера дерева после теста
+    cout << "items count:" << tree.size() << endl;
+    //теоретической оценки трудоёмкости операций BST
+    cout << "1.39*log2(n)=" << 1.39 * (log((double)n) / log(2.0)) << endl;
+    //экспериментальной оценки трудоёмкости вставки
+    cout << "Count insert: " << I / (n / 2) << endl;
+    //экспериментальной оценки трудоёмкости удаления
+    cout << "Count delete: " << D / (n / 2) << endl;
+    //экспериментальной оценки трудоёмкости поиска
+    cout << "Count search: " << S / (n / 2) << endl;
+    //освобождение памяти массива m[]
+    delete[] m;
+}
+void test_ord(int n)
+{
+    //создание дерева для 64 – разрядных ключей типа INT_64
+    BinaryTree< INT_64, int > tree;
+    //массив для ключей, которые присутствуют в дереве
+    INT_64* m = new INT_64[n];
+    //заполнение дерева и массива элементами
+    // с возрастающими чётными ключами
+    //на интервале [0, 10000, 20000, ... ,10000*n]
+    for (int i = 0; i < n; i++) {
+        m[i] = i * 10000;
+        tree.insert(m[i], 1);
+    }
+    //вывод размера дерева до теста
+    cout << "items count:" << tree.size() << endl;
+    //обнуление счётчиков трудоёмкости вставки,
+    // удаления и поиска
+    double I = 0;
+    double D = 0;
+    double S = 0;
+    //установка первого случайного числа
+    sRand();
+    //генерация потока операций, 10% - промахи операций
+    for (int i = 0; i < n / 2; i++)
+    {
+        if (i % 10 == 0) //10% промахов
+        {
+            int k = LineRand() % (10000 * n);
+            k = k + !(k % 2); //случайный нечётный ключ
+            tree.erase(k);
+            D += tree.getLastOpPassedNodesNum();
+            tree.insert(m[rand() % n], 1);
+            I += tree.getLastOpPassedNodesNum();
+            k = LineRand() % (10000 * n);
+            k = k + !(k % 2); // случайный нечётный ключ
+            try {
+                tree.at(k);
+                S += tree.getLastOpPassedNodesNum();
+            }
+            //обработка исключения при ошибке операции поиска
+            catch (...) { S += tree.getLastOpPassedNodesNum(); }
+        }
+        else //90% успешных операций
+        {
+            int ind = rand() % n;
+            tree.erase(m[ind]);
+            D += tree.getLastOpPassedNodesNum();;
+            int k = LineRand() % (10000 * n);
+            k = k + k % 2; // случайный чётный ключ
+            tree.insert(k, 1);
+            I += tree.getLastOpPassedNodesNum();;
+            m[ind] = k;
+            try {
+                tree.at(m[rand() % n]);
+                S += tree.getLastOpPassedNodesNum();
+            }
+            //обработка исключения при ошибке операции поиска
+            catch (...) { S += tree.getLastOpPassedNodesNum(); }
+        }
+    }
+    //вывод результатов:
+    // вывод размера дерева после теста
+    cout << "items count:" << tree.size() << endl;
+    //теоретической оценки трудоёмкости операций BST
+    cout << "n/2 =" << n / 2 << endl;
+    //экспериментальной оценки трудоёмкости вставки
+    cout << "Count insert: " << I / (n / 2) << endl;
+    //экспериментальной оценки трудоёмкости удаления
+    cout << "Count delete: " << D / (n / 2) << endl;
+    //экспериментальной оценки трудоёмкости поиска
+    cout << "Count search: " << S / (n / 2) << endl;
+    //освобождение памяти массива m[]
+    delete[] m;
+} //конец теста
+
+
 
 int main()
 {
+
+   
+
     /*
         std::map<std::string, unsigned> products;
         products.insert(std::make_pair("2",5));
@@ -155,7 +331,7 @@ int main()
         }
         }, false);
 
-    MenuItem inputMenu("insert(key,val) [Вставка значения]", [&] {
+    MenuItem inputMenu(" insert(key,val) [Вставка значения]", [&] {
         std::cout << "\n Введите ключ: ";
         std::cin >> inputKeyBuffer;
         std::cout << "\n Введите значение: ";
@@ -167,7 +343,7 @@ int main()
         }
         Menu::console.setMenu(&navigationMenu);
         });
-    MenuItem at("at(key) [Получение значения по ключу]", [&]{
+    MenuItem at(" at(key) [Получение значения по ключу]", [&]{
         std::cout << "\nВведите ключ: ";
         std::cin >> inputKeyBuffer;
         try {
@@ -179,7 +355,7 @@ int main()
             _getch();
         }
     });
-    MenuItem atnwrite("at(key) (+write) [Запись значения по существующему ключу]", [&] {
+    MenuItem atnwrite(" at(key) (+write) [Запись значения по существующему ключу]", [&] {
         std::cout << "\n Введите ключ: ";
         std::cin >> inputKeyBuffer;
         std::cout << " Введите новое значение: ";
@@ -192,20 +368,20 @@ int main()
             _getch();
         }
     });
-    MenuItem size("size() [Опрос размера дерева]", [&] {
+    MenuItem size(" size() [Опрос размера дерева]", [&] {
         std::cout << " Размер дерева: " << bstree.size();
         _getch();
     });
-    MenuItem isEmpty("empty() [Опрос дерева на пустоту]", [&] {
+    MenuItem isEmpty(" empty() [Опрос дерева на пустоту]", [&] {
         std::cout <<"\n"<< (bstree.empty() ? "Дерево пусто" : "Дерево не пусто");
         _getch();
     });
-    MenuItem clear("clear() [Очистка дерева]", [&] {
+    MenuItem clear(" clear() [Очистка дерева]", [&] {
         bstree.clear();
         iter = bstree.begin();
         riter = bstree.rbegin();
      });
-    MenuItem erase("erase(key) [Удаление элемента по ключу]", [&] {
+    MenuItem erase(" erase(key) [Удаление элемента по ключу]", [&] {
         std::cout << "\n Введите ключ: ";
         std::cin >> inputKeyBuffer;
         try {
@@ -223,7 +399,7 @@ int main()
             _getch();
         }
     });
-    MenuItem keys("keys() [Получение списка ключей t -> L -> R ]", [&] {
+    MenuItem keys(" keys() [Получение списка ключей t -> L -> R ]", [&] {
         auto list = bstree.keys();
         std::cout << "\n\nПолный список ключей: ";
         for (auto i : list) {
@@ -231,7 +407,21 @@ int main()
         }
         _getch();
     });
-
+    MenuItem tests(" Тестирование коллекции ", [&] {
+        int input;
+        std::cout << " Введите размер коллекции: ";
+        std::cin >> input;
+        std::cout << "\n Случайное дерево:\n===========================\n";
+        test_rand(input);
+        std::cout << "===========================\n Вырожденное дерево:\n===========================\n";
+        test_ord(input);
+        std::cout << "===========================";
+        _getch();
+    });
+    MenuItem print(" Вывести дерево ", [&] {
+        bstree.print();
+        _getch();
+    });
     
     //test_rand(50);
     //_getch();
@@ -245,46 +435,16 @@ int main()
     navigationMenu.addItem(clear);
     navigationMenu.addItem(erase);
     navigationMenu.addItem(keys);
+    navigationMenu.addItem(tests);
+    navigationMenu.addItem(print);
     Menu::console.setMenu(&navigationMenu);
     Menu::console.show();
-
 
    
 
 
 
-    /*
-    int n = 0;
-    size_t _depth = 0;
-    s.forEachHorizontal([&](int key, int val, size_t depth) {
-        std::cout << "[" << key << ":" << val << "] ";
-        if (_depth != depth) { _depth++; std::cout << "\n"; }
-        });
-    std::cout << "\n";
-    size_t lastFixedDepth = 0;
-    std::queue<std::vector<int>> toPrint;
-    std::vector<int> currentDepthArray;
-   /* s.forEachHorizontal([&](int key, int value, size_t depth) {
-        if (lastFixedDepth != depth) {
-            lastFixedDepth = depth;
-            toPrint.push(currentDepthArray);
-            currentDepthArray.clear();
-        }
-        currentDepthArray.push_back(key);
-    });
-    toPrint.push(currentDepthArray);
-    int currentDepth = 0;
-    while (!toPrint.empty()) {
-        currentDepthArray = toPrint.front();
-        toPrint.pop();
-        for (int i = 0; i < currentDepthArray.size(); i++) {
-            for (int j = 0; j < (lastFixedDepth - currentDepth)*3; j++) std::cout << " ";
-            std::cout << currentDepthArray[i];
-            for (int j = 0; j < (lastFixedDepth - currentDepth)*3; j++) std::cout << " ";
-        }
-        currentDepth++;
-        std::cout << "\n";
-    }*/
+  
     //std::cout << s.size();
     //s.print();
     //std::cout << s.size();

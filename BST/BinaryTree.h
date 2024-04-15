@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <concepts>
 #include <string>
 #include <functional>
@@ -21,7 +21,7 @@ concept Comparable = requires(T a, T b) {
 template<typename T>
 concept CopyConstructible = std::is_copy_constructible<T>::value;
 
-
+size_t lastOperationPassedNodes = 0; //for insert, at, erase
 
 template <Comparable K, CopyConstructible V>
 class BinaryTree
@@ -48,12 +48,14 @@ private:
 	void forEachHorizontalInternal(std::function<void(K&, V&, size_t depth, size_t ordinalNumber)>) const;
 
 	Node* findRecursive(const K& key, Node* node, std::stack<Node*>& wayFromRoot) const;
-	bool eraseRecursive(const K& key, Node* node, Node* previousNode);
+	Node* eraseRecursive(Node* currentNode, const K& key, bool& success);
+	Node* findMinElement(Node*);
 	bool insertRecursive(const K& key, const V& value, Node* node);
 	Node* findAndCreateIfNotExists(const K& key, Node* node);
 	
-public:
 	
+public:
+	void print();
 	/*==========================================
 	          RULE OF FIVE + DESTRUCTOR
 	==========================================*/
@@ -281,6 +283,12 @@ public:
 		reverse_iterator& operator--() { this->goBackward(); return *this; };
 		reverse_iterator operator--(int) { reverse_iterator newVal = *this; this->goBackward(); return newVal; };
 	};
+
+	/*==========================================
+					SERVICE
+	==========================================*/
+	size_t getLastOpPassedNodesNum() { return lastOperationPassedNodes; }
+
 };
 
 /*==========================================================================================
@@ -304,6 +312,9 @@ public:
 template<Comparable K, CopyConstructible V>
 inline BinaryTree<K, V>::Node* BinaryTree<K, V>::findRecursive(const K& key, Node* node, std::stack<Node*>& wayFromRoot) const
 {
+	if (node == root) lastOperationPassedNodes = 0;
+	lastOperationPassedNodes++;
+
 	if (node == nullptr) 
 		return nullptr;
 	if (node->key == key)
@@ -319,121 +330,101 @@ inline BinaryTree<K, V>::Node* BinaryTree<K, V>::findRecursive(const K& key, Nod
 }
 
 template<Comparable K, CopyConstructible V>
-inline bool BinaryTree<K, V>::eraseRecursive(const K& key, Node* currentNode, Node* previousNode)
-{
-	if (currentNode == nullptr) return false;
-	if (key == currentNode->key) {
-		//No childs:
+inline BinaryTree<K, V>::Node* BinaryTree<K, V>::findMinElement(Node* currentNode) {
+	if (currentNode->left == nullptr) 
+		return currentNode;
+	lastOperationPassedNodes++;
+	return findMinElement(currentNode->left);
+}
+
+template<Comparable K, CopyConstructible V>
+inline BinaryTree<K, V>::Node* BinaryTree<K, V>::eraseRecursive(Node* currentNode, const K& key, bool& success)
+{		
+		
+	if (currentNode == root) lastOperationPassedNodes = 0;
+	lastOperationPassedNodes++;
+
+	// если нашли нужный элемент, начинаем процедуру удаления
+	if (currentNode->key == key) {
+		// обработка самого простого случая, вместо узла возвращается null 
 		if (currentNode->left == nullptr && currentNode->right == nullptr) {
-			//If target node is root
-			if (previousNode == nullptr) {
-				root = nullptr;
-			}
-			else {
+			return nullptr;
+		}
 
-				if (previousNode->left == currentNode)
-					previousNode->left = nullptr;
-				else
-					previousNode->right = nullptr;
+		// обработка двух случаев, с только одним из поддеревьев 
+		if (currentNode->left == nullptr) {
+			return currentNode->right;
+		}
 
-				delete currentNode;
-				--size_;
-				return true;
-			}
+		if (currentNode->right == nullptr) {
+			return currentNode->left;
 		}
-		//Both childs exist
-		if (currentNode->left != nullptr && currentNode->right != nullptr) {
-			Node* minimumInRightBranch = currentNode->right;
-			Node* minimumInRightBranchPrev = currentNode;
-			//Finding minimum in the right branch
-			while (minimumInRightBranch->left != nullptr) {
-				minimumInRightBranchPrev = minimumInRightBranch;
-				minimumInRightBranch = minimumInRightBranch->left;
-			}
-			//If minimum node has right child -> replace it on minimum node place
-			if (minimumInRightBranch->right != nullptr)
-				minimumInRightBranchPrev->right = minimumInRightBranch->right;
-			else {
-				if (minimumInRightBranchPrev->left == minimumInRightBranch)
-					minimumInRightBranchPrev->left = nullptr;
-				else
-					minimumInRightBranchPrev->right = nullptr;
-			}
-			//Replace minimum node on target node place
-			if (previousNode == nullptr) {
-				root = minimumInRightBranch;
-			}
-			else {
-				if (previousNode->left == currentNode)
-					previousNode->left = minimumInRightBranch;
-				else
-					previousNode->right = minimumInRightBranch;
-			}
-			minimumInRightBranch->left = currentNode->left;
-			if (minimumInRightBranch != currentNode->right)
-				minimumInRightBranch->right = currentNode->right;
-			delete currentNode;
-			--size_;
-			return true;
-		}
-		//If there is only left child
-		if (currentNode->left != nullptr) {
-			if (previousNode != nullptr) {
-				if (previousNode->left == currentNode)
-					previousNode->left = currentNode->left;
-				else
-					previousNode->right = currentNode->left;
-			}
-			else {
-				root = currentNode->left;
-			}
-		}
-		//If there is only right child
-		else {
-			if (previousNode != nullptr) {
-				if (previousNode->left == currentNode)
-					previousNode->left = currentNode->right;
-				else
-					previousNode->right = currentNode->right;
-			}
-			else {
-				root = currentNode->right;
-			}
-		}
-		delete currentNode;
-		--size_;
-		return true;
+
+		Node* minNodeInRightSubtree = findMinElement(currentNode->right);
+		// заменили текущий элемент минимальным из правого поддерева
+		currentNode->key = minNodeInRightSubtree->key;
+		currentNode->value = minNodeInRightSubtree->value;
+
+		// ищем в правом поддереве минимальный элемент, 
+		// значение которого уже вставлено на место текущего
+		currentNode->right = eraseRecursive(minNodeInRightSubtree,minNodeInRightSubtree->key,success);
+
+		return currentNode;
 	}
-	else {
-		previousNode = currentNode;
-		if (key < currentNode->key) {
-			if (currentNode->left != nullptr) {
-				eraseRecursive(key, currentNode->left, currentNode);
-			}
-			else {
-				return false;
-			}
+
+	// попадаем сюда, если элемент не был найден, 
+	// просто проваливаемся в дерево глубже и глубже
+
+	// производится рекурсивный вызов этой же функции,
+	// при этом если элемент не будет найден,
+	// то алгоритм просто будет возвращать существующую ссылку на поддерево,
+	// которая присвоится в ту же позицию
+	if (key < currentNode->key) {
+		if (currentNode->left == nullptr) {
+			success = false;
+			return currentNode;
 		}
-		else {
-			if (currentNode->right != nullptr) {
-				eraseRecursive(key, currentNode->right, currentNode);
-			}
-			else {
-				return false;
-			}
+
+		// проваливаемся в левое поддерево,
+		// после рекурсивной отработки функции _deleteNode
+		// будет возвращен текущий элемент,
+		// который в предыдущем вызове будет присвоен
+		currentNode->left = eraseRecursive(currentNode->left, key,success);
+
+		// присваивание на рекурсивный уровень выше,
+		// может быть как в левое поддерево,так и в правое,
+		// на текущем уровне мы не знаем какое поддерево обрабатываем  
+		return currentNode;
+	}
+
+	// аналогичная обработка для правого поддерева
+	if (key > currentNode->key) {
+		if (currentNode->right == nullptr) {
+			success = false;
+			return currentNode;
 		}
+
+		currentNode->right = eraseRecursive(currentNode->right, key,success);
+		return currentNode;
 	}
 }
+
+
 
 template<Comparable K, CopyConstructible V>
 inline bool BinaryTree<K, V>::insertRecursive(const K& key, const V& value, Node* node)
 {
+		if (node == root) lastOperationPassedNodes = 0;
+		lastOperationPassedNodes++;
+
 	
 		if (key == node->key) return false;
 		if (key > node->key) {
 			if (node->right == nullptr) {
 				Node* newNode;
 				newNode = new Node();
+				newNode->left = nullptr;
+				newNode->right = nullptr;
 				newNode->key = key;
 				newNode->value = value;
 				node->right = newNode;
@@ -446,6 +437,8 @@ inline bool BinaryTree<K, V>::insertRecursive(const K& key, const V& value, Node
 			if (node->left == nullptr) {
 				Node* newNode;
 				newNode = new Node();
+				newNode->left = nullptr;
+				newNode->right = nullptr;
 				newNode->key = key;
 				newNode->value = value;
 				node->left = newNode;
@@ -455,7 +448,6 @@ inline bool BinaryTree<K, V>::insertRecursive(const K& key, const V& value, Node
 			}
 		}
 
-	size_++;
 	return true;
 }
 
@@ -768,17 +760,27 @@ inline bool BinaryTree<K, V>::insert(const K& key, const V& value)
 		newNode->key = key;
 		newNode->value = value;
 		root = newNode;
-		size_++;
+		++size_;
 		return true;
 	}
+	bool result = insertRecursive(key, value, root);
+	if (result) ++size_;
+	return result;
+}
 
-	return insertRecursive(key, value, root);
+template<Comparable K, CopyConstructible V>
+inline bool BinaryTree<K, V>::insert(std::pair<const K&, const V&> pair)
+{
+	return insert(pair.first, pair.second);
 }
 
 template<Comparable K, CopyConstructible V>
 inline bool BinaryTree<K, V>::erase(const K& key)
 {
-	return eraseRecursive(key, root, nullptr);
+	bool success = true;
+	root = eraseRecursive(root, key, success);
+	if (root) --size_;
+	return success;
 }
 
 template<Comparable K, CopyConstructible V>
@@ -1094,6 +1096,69 @@ inline void BinaryTree<K, V>::reverse_iterator_base::goBackward()
 	}
 }
 
+template<Comparable K, CopyConstructible V>
+inline void BinaryTree<K, V>::print()
+{
+
+	int MAXIMUM_LEVEL = 5;
+
+	if (this->root == nullptr) return;
+	Node* root = this->root;
+	size_t depth = 0;
+	size_t ordinalNumber = 0;
+
+	struct triplet {
+		Node* node;
+		size_t depth;
+		size_t ordinalNumber;
+		triplet(Node* node, size_t depth, size_t ordinalNumber) {
+			this->node = node; this->depth = depth; this->ordinalNumber = ordinalNumber;
+		}
+	};
+
+	std::vector<std::vector<Node*>> vectors;
+	for (int i = 0; i < pow(2, MAXIMUM_LEVEL); i++) {
+		std::vector<Node*> innerVector;
+		for (int j = 0; j < pow(2, MAXIMUM_LEVEL); j++) {
+			innerVector.push_back(nullptr);
+		}
+		vectors.push_back(innerVector);
+	}
+	size_t maxDepth;
+	std::queue<triplet> nodes;
+	do {
+		if (!nodes.empty()) nodes.pop();
+		vectors[depth][ordinalNumber] = root;
+		if (root->left != nullptr) nodes.push(triplet(root->left, depth + 1, ordinalNumber * 2));
+		if (root->right != nullptr) nodes.push(triplet(root->right, depth + 1, ordinalNumber * 2 + 1));
+		maxDepth = depth + 1;
+		if (!nodes.empty()) {
+			root = nodes.front().node;
+			depth = nodes.front().depth;
+			ordinalNumber = nodes.front().ordinalNumber;
+		}
+	} while (!nodes.empty());
+	size_t maxKeySize = 3;
+	size_t maxSize = 3;
+	int maxValuesNumber = pow(2, maxDepth);
+	int symbolsInString = maxKeySize * maxValuesNumber + maxValuesNumber; 
+	for (int i = 0; i <= maxDepth && i <= MAXIMUM_LEVEL; i++) {
+		int thisStringValuesNumber = pow(2, i);
+		for (int j = 0; j < thisStringValuesNumber; j++) {
+			int probelsAfterEveryKey = (symbolsInString - (thisStringValuesNumber * maxKeySize)) / thisStringValuesNumber / 2;
+			for (int s = 0; s < probelsAfterEveryKey; s++) std::cout << " ";
+			if (vectors[i][j] == nullptr) {
+				for (int s = 0; s < maxKeySize; s++) std::cout << " ";
+			}
+			else {
+				std::cout << vectors[i][j]->key;
+			}
+			for (int s = 0; s < probelsAfterEveryKey; s++) std::cout << " ";
+		}
+		maxSize *= 2;
+		std::cout << "\n";
+	}
+}
 
 /*
 
