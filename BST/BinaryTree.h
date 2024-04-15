@@ -340,7 +340,13 @@ inline BinaryTree<K, V>::Node* BinaryTree<K, V>::findMinElement(Node* currentNod
 template<Comparable K, CopyConstructible V>
 inline BinaryTree<K, V>::Node* BinaryTree<K, V>::eraseRecursive(Node* currentNode, const K& key, bool& success)
 {		
-		
+	success = true;
+	
+	if (currentNode == nullptr) {
+		success = false;
+		return nullptr;
+	}
+
 	if (currentNode == root) lastOperationPassedNodes = 0;
 	lastOperationPassedNodes++;
 
@@ -348,7 +354,7 @@ inline BinaryTree<K, V>::Node* BinaryTree<K, V>::eraseRecursive(Node* currentNod
 	if (currentNode->key == key) {
 		// обработка самого простого случая, вместо узла возвращается null 
 		if (currentNode->left == nullptr && currentNode->right == nullptr) {
-			return nullptr;
+				return nullptr;
 		}
 
 		// обработка двух случаев, с только одним из поддеревьев 
