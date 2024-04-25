@@ -249,22 +249,24 @@ int main()
     BinaryTree<key, value> bstree;
     auto iter = bstree.begin();
     auto riter = bstree.rbegin();
-
+    
     enum ITERATOR_TYPE {
         Forward,
         Reverse
     };
     ITERATOR_TYPE iteratorMode = ITERATOR_TYPE::Forward;
-
+    bool autoIteratorCorrection = true;
     //list.push_back(3);
     //OPERATION_TYPE operationType;
     Menu navigationMenu([&]() {
 
         std::cout <<
             " ==================================================================\n\n"
+            << ""
             << " Используйте стрелки, чтобы переключаться между пунктами меню\n"
-            << " Используйте TAB чтобы сменить тип итератора\n"
-            << " Используемый итератор:\033[1;36;40m " << (iteratorMode == ITERATOR_TYPE::Forward ? "прямой" : "обратный") << "\033[0m "
+            << " Используйте TAB чтобы сменить тип итератора, ~, чтобы переключить автокоррекцию невалидных итераторов\n"
+            << " Используемый итератор:\033[1;36;40m " << (iteratorMode == ITERATOR_TYPE::Forward ? "ПРЯМОЙ" : "ОБРАТНЫЙ") << "\033[0m \n"
+            << " Автокоррекция невалидных итераторов: " << (autoIteratorCorrection ? "\033[1;32;40mВКЛЮЧЕНА" : "\033[1;31;40mВЫКЛЮЧЕНА") << "\033[0m"
             << "\n ==================================================================\n\n";
 
         if (iteratorMode == ITERATOR_TYPE::Reverse) {
@@ -331,16 +333,23 @@ int main()
         }
         }, false);
 
+    navigationMenu.addKeyListener(96, [&]() { 
+        autoIteratorCorrection = !autoIteratorCorrection;   
+        }, false);
+    navigationMenu.addKeyListener(-72, [&]() {
+        autoIteratorCorrection = !autoIteratorCorrection;
+        }, false);
+
     MenuItem inputMenu(" insert(key,val) [Вставка значения]", [&] {
         std::cout << "\n Введите ключ: ";
         std::cin >> inputKeyBuffer;
         std::cout << "\n Введите значение: ";
         std::cin >> inputValueBuffer;
         bstree.insert(inputKeyBuffer, inputValueBuffer);
-        if (bstree.size() == 1) {
-            riter = bstree.rbegin();
-            iter = bstree.begin();
-        }
+        //if (bstree.size() == 1) {
+        if (autoIteratorCorrection) riter = bstree.rbegin();
+        if (autoIteratorCorrection) iter = bstree.begin();
+        //}
         Menu::console.setMenu(&navigationMenu);
         });
     MenuItem at(" at(key) [Получение значения по ключу]", [&]{
@@ -378,8 +387,8 @@ int main()
     });
     MenuItem clear(" clear() [Очистка дерева]", [&] {
         bstree.clear();
-        iter = bstree.begin();
-        riter = bstree.rbegin();
+        if (autoIteratorCorrection) iter = bstree.begin();
+        if (autoIteratorCorrection) riter = bstree.rbegin();
      });
     MenuItem erase(" erase(key) [Удаление элемента по ключу]", [&] {
         std::cout << "\n Введите ключ: ";
@@ -390,8 +399,8 @@ int main()
                 _getch();
             }
             else {
-                iter = bstree.begin();
-                riter = bstree.rbegin();
+               if(autoIteratorCorrection) iter = bstree.begin();
+               if (autoIteratorCorrection) riter = bstree.rbegin();
             }
         }
         catch (std::exception ex) {
@@ -407,6 +416,20 @@ int main()
         }
         _getch();
     });
+    MenuItem find(" find(key) [Получение итератора по ключу]", [&] {
+        std::cout << "\n Введите ключ: ";
+        std::cin >> inputKeyBuffer;
+        try {
+            if (iteratorMode == ITERATOR_TYPE::Forward)
+                iter = bstree.find(inputKeyBuffer);
+            else
+                riter.copy(bstree.find(inputKeyBuffer));
+        }
+        catch (std::exception ex) {
+            std::cout << "\n\n Поймано исключение: " << ex.what();
+            _getch();
+        }
+        });
     MenuItem tests(" Тестирование коллекции ", [&] {
         int input;
         std::cout << " Введите размер коллекции: ";
@@ -423,10 +446,298 @@ int main()
         _getch();
     });
     
+    /*
+    
+    Меню итераторов
+    
+    */
+    auto savedIter = bstree.begin();
+    auto savedRiter = bstree.rbegin();
+    bool usingSavedIter = false;
+    Menu iteratorOperations([&] {
+        std::cout <<
+            " ==================================================================\n\n"
+            << ""
+            << " Используйте стрелки, чтобы переключаться между пунктами меню\n"
+            << " Используйте TAB, чтобы переключаться между итераторами\n"
+            << " Используйте ~, чтобы переключаться между типами итераторов\n"
+            << " Тип итераторов:\033[1;36;40m " << (iteratorMode == ITERATOR_TYPE::Forward ? "ПРЯМОЙ" : "ОБРАТНЫЙ") << "\033[0m \n"
+            << " Используемый итератор:" << (usingSavedIter ? "\033[1;37;46mДОПОЛНИТЕЛЬНЫЙ\033[0m \n\n" : "\033[1;37;42mОСНОВНОЙ\033[0m\n\n")
+            << " Основной: \033[1;37;42m";
+        if (iteratorMode == ITERATOR_TYPE::Forward) {
+            if (iter == bstree.end()) {
+                std::cout << "[end]\033[0m\n";
+            }
+            else {
+                std::cout << "[" << (*iter).first << " : " << (*iter).second << "]\033[0m\n";
+            }
+        }
+        else {
+            if (riter == bstree.rend()) {
+                std::cout << "[rend]\033[0m\n";
+            }
+            else {
+                std::cout << "[" << (*riter).first << " : " << (*riter).second << "]\033[0m\n";
+            }
+        }
+        std::cout << " Дополнительный: \033[1;37;46m";
+        if (iteratorMode == ITERATOR_TYPE::Forward) {
+            if (savedIter == bstree.end()) {
+                std::cout << "[end]\033[0m\n";
+            }
+            else {
+                std::cout << "[" << (*savedIter).first << " : " << (*savedIter).second << "]\033[0m\n";
+            }
+        }
+        else {
+            if (savedRiter == bstree.rend()) {
+                std::cout << "[rend]\033[0m\n";
+            }
+            else {
+                std::cout << "[" << (*savedRiter).first << " : " << (*savedRiter).second << " ]\033[0m\n";
+            }
+        }
+        std::cout<< "\n ==================================================================\n\n";
+
+            if (iteratorMode == ITERATOR_TYPE::Reverse) {
+
+                for (auto it = bstree.rbegin(); it != bstree.rend(); it++) {
+                    bool isSavedRiterPointingAt = savedRiter != bstree.rend() && &(*savedRiter).first == &(*it).first;
+                    bool isIterPointingAt = (riter != bstree.rend() && &((*riter).first) == &((*it).first));
+                    if (isSavedRiterPointingAt && isIterPointingAt) {
+                        std::cout << "\033[1;37;46m \033[1;37;42m ";
+                    }
+                    else {
+                        if (isSavedRiterPointingAt) std::cout << "\033[1;37;46m";
+                        if (isIterPointingAt) std::cout << "\033[1;37;42m";
+                    }
+                    //std::cout << "[this:]" << it.targetIndex << "[prev:]" << list.getNode(it).previousNodeIndex << "[next:]" << list.getNode(it).nextNodeIndex << " value: ";
+                    std::cout << "[" << (*it).first << " : " << (*it).second << "]\033[0m ";
+                }
+                if (riter == bstree.rend() && savedRiter == bstree.rend()) {
+                    std::cout << "\033[1;37;46m \033[1;37;42m[rend]\033[0m";
+                }
+                else {
+                    if (riter == bstree.rend()) std::cout << "\033[1;37;42m[rend]\033[0m";
+                    if (savedRiter == bstree.rend()) std::cout << "\033[1;37;46m[rend]\033[0m";
+                }
+            }
+            else {
+
+                for (auto it = bstree.begin(); it != bstree.end(); it++) {
+                    bool isSavedIterPointingAt = savedIter != bstree.end() && &(*savedIter).first == &(*it).first;
+                    bool isIterPointingAt = (iter != bstree.end() && &((*iter).first) == &((*it).first));
+                    if (isSavedIterPointingAt && isIterPointingAt) {
+                        std::cout << "\033[1;37;46m \033[1;37;42m";
+                    }
+                    else {
+                        if (isSavedIterPointingAt) std::cout << "\033[1;37;46m";
+                        if (isIterPointingAt) std::cout << "\033[1;37;42m";
+                    }
+                    //std::cout << "[this:]" << it.targetIndex << "[prev:]" << list.getNode(it).previousNodeIndex << "[next:]" << list.getNode(it).nextNodeIndex << " value: ";
+                    std::cout << "[" << (*it).first << " : " << (*it).second << "]\033[0m ";
+                }
+                if (iter == bstree.end() && savedIter == bstree.end()) {
+                    std::cout << "\033[1;37;46m \033[1;37;42m[rend]\033[0m";
+                }
+                else {
+                    if (iter == bstree.end()) std::cout << "\033[1;37;42m[end]\033[0m";
+                    if (savedIter == bstree.rend()) std::cout << "\033[1;37;46m[end]\033[0m";
+                }
+            }
+    });
+
+    iteratorOperations.addKeyListener(9, [&]() {
+        usingSavedIter = !usingSavedIter;
+    }, false);
+
+    iteratorOperations.addKeyListener(96, [&]() {
+        if (iteratorMode == ITERATOR_TYPE::Forward) {
+            iteratorMode = ITERATOR_TYPE::Reverse;
+            riter = bstree.rbegin();
+
+        }
+        else {
+            iteratorMode = ITERATOR_TYPE::Forward;
+            iter = bstree.begin();
+        }
+        }, false);
+    iteratorOperations.addKeyListener(-72, [&]() {
+        if (iteratorMode == ITERATOR_TYPE::Forward) {
+            iteratorMode = ITERATOR_TYPE::Reverse;
+            riter = bstree.rbegin();
+
+        }
+        else {
+            iteratorMode = ITERATOR_TYPE::Forward;
+            iter = bstree.begin();
+        }
+        }, false);
+
+    MenuItem iteratorMenu(" Меню итераторов", iteratorOperations);
+
+    MenuItem plus(" ++", [&] {
+        try {
+            if (iteratorMode == ITERATOR_TYPE::Reverse) {
+                if (usingSavedIter)
+                    ++savedRiter;
+                else
+                    ++riter;
+            }
+            else {
+                if (usingSavedIter)
+                    ++savedIter;
+                else
+                    ++iter;
+            }
+        }
+        catch (std::exception ex) {
+            std::cout << "\n\n Поймано исключение: " << ex.what();
+            _getch();
+        }
+       
+    });
+    MenuItem minus(" --", [&] {
+        try {
+            if (iteratorMode == ITERATOR_TYPE::Reverse) {
+                if (usingSavedIter)
+                    --savedRiter;
+                else
+                    --riter;
+            }
+            else {
+                if (usingSavedIter)
+                    --savedIter;
+                else
+                    --iter;
+            }
+        }
+        catch (std::exception ex) {
+            std::cout << "\n\n Поймано исключение: " << ex.what();
+            _getch();
+        }
+    });
+    MenuItem rbegin(" rbegin()", [&] {
+        iteratorMode = ITERATOR_TYPE::Reverse;
+        if (usingSavedIter)
+            savedRiter = bstree.rbegin();
+        else
+            riter = bstree.rbegin();
+       // Menu::console.setMenu(&navigationMenu);
+    });
+    MenuItem rend(" rend()", [&] {
+        iteratorMode = ITERATOR_TYPE::Reverse;
+        if (usingSavedIter)
+            savedRiter = bstree.rend();
+        else
+            riter = bstree.rend();
+        //Menu::console.setMenu(&navigationMenu);
+    });
+    MenuItem end(" end()", [&] {
+        iteratorMode = ITERATOR_TYPE::Forward;
+        if (usingSavedIter)
+            savedIter = bstree.end();
+        else
+            iter = bstree.end();
+        //Menu::console.setMenu(&navigationMenu);
+    });
+    MenuItem begin(" begin()", [&] {
+        iteratorMode = ITERATOR_TYPE::Forward;
+        if (usingSavedIter)
+            savedIter = bstree.begin();
+        else
+            iter = bstree.begin();
+        //Menu::console.setMenu(&navigationMenu);
+    });
+    MenuItem compare(" <=>", [&]{
+        std::strong_ordering result;
+        if (iteratorMode == ITERATOR_TYPE::Forward) {
+            result = iter <=> savedIter;
+        }
+        else {
+            result = riter <=> savedRiter;
+        }
+        std::cout << "\n";
+        if (result == std::strong_ordering::equal) {
+            std::cout << " Результат сравнения: основной == дополнительный";
+        }
+        if (result == std::strong_ordering::less) {
+            std::cout << " Результат сравнения: основной < дополнительный";
+        }
+        if (result == std::strong_ordering::greater) {
+            std::cout<< " Результат сравнения: основной > дополнительный";
+        }
+        _getch();
+       
+    });
+    MenuItem outputIter(" * (чтение)", [&] {
+        try {
+            if (iteratorMode == ITERATOR_TYPE::Forward) {
+                if (usingSavedIter) {
+                    std::cout << "\n Значение по итератору: [" << (*savedIter).first << " : " << (*savedIter).second << "]";
+                }
+                else {
+                    std::cout << "\n Значение по итератору: [" << (*iter).first << " : " << (*iter).second<<"]";
+                }
+            }
+            else {
+                if (usingSavedIter) {
+                    std::cout << "\n Значение по итератору: [" << (*savedRiter).first << " : " << (*savedRiter).second << "]";
+                }
+                else {
+                    std::cout << "\n Значение по итератору: [" << (*riter).first << " : " << (*riter).second << "]";
+                }
+            }
+            _getch();
+        }
+        catch (std::exception ex) {
+            std::cout << "\n\n Поймано исключение: " << ex.what();
+            _getch();
+        }
+    });
+    MenuItem inputIter(" * (обновление)", [&] {
+        std::cout << "\n Введите новое значение: ";
+        value inputBuffer;
+        std::cin >> inputBuffer;
+
+        try {
+            if (iteratorMode == ITERATOR_TYPE::Forward) {
+                if (usingSavedIter) {
+                    (*savedIter).second = inputBuffer;
+                }
+                else {
+                    (*iter).second = inputBuffer;
+                }
+            }
+            else {
+                if (usingSavedIter) {
+                    (*savedRiter).second = inputBuffer;
+                }
+                else {
+                    (*riter).second = inputBuffer;
+                }
+            }
+
+        }
+        catch (std::exception ex) {
+            std::cout << "\n\n Поймано исключение: " << ex.what();
+            _getch();
+        }
+        });
+
+    iteratorOperations.addItem(begin);
+    iteratorOperations.addItem(end);
+    iteratorOperations.addItem(rbegin);
+    iteratorOperations.addItem(rend);
+    iteratorOperations.addItem(compare);
+    iteratorOperations.addItem(plus);
+    iteratorOperations.addItem(minus);
+    iteratorOperations.addItem(outputIter);
+    iteratorOperations.addItem(inputIter);
     //test_rand(50);
     //_getch();
 
-
+    navigationMenu.addItem(iteratorMenu);
     navigationMenu.addItem(inputMenu);
     navigationMenu.addItem(at);
     navigationMenu.addItem(atnwrite);
@@ -435,8 +746,10 @@ int main()
     navigationMenu.addItem(clear);
     navigationMenu.addItem(erase);
     navigationMenu.addItem(keys);
+    navigationMenu.addItem(find);
     navigationMenu.addItem(tests);
     navigationMenu.addItem(print);
+    
     Menu::console.setMenu(&navigationMenu);
     Menu::console.show();
 

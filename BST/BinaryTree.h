@@ -166,7 +166,6 @@ public:
 		std::stack<Node*> nodes;
 		iterator_base(Node*);
 		iterator_base() {};
-		void copy(const iterator_base& other);
 		std::pair<const K&, V&> get() const;
 		// to override:
 		virtual void goForward() = 0;
@@ -175,6 +174,7 @@ public:
 		friend bool operator==(const iterator_base& one, const iterator_base& two) {
 			return one.ptr == two.ptr;
 		};
+		void copy(const iterator_base& other);
 	};
 
 	// Forward iterator superclass.
@@ -592,16 +592,19 @@ template<Comparable K, CopyConstructible V>
 BinaryTree<K, V>::iterator BinaryTree<K, V>::find(const K& key) {
 	std::stack<Node*> wayFromRoot;
 	Node* result = findRecursive(key, root,wayFromRoot);
+	if (result == nullptr) return end();
 	iterator resultinIterator(result);
 	resultinIterator.nodes = wayFromRoot;
 	return resultinIterator;
 }
 
 
+
 template<Comparable K, CopyConstructible V>
 BinaryTree<K, V>::const_iterator BinaryTree<K, V>::find(const K& key) const {
 	std::stack<Node*> wayFromRoot;
 	Node* result = findRecursive(key, root, wayFromRoot);
+	if (result == nullptr) return cend();
 	const_iterator resultinIterator(result);
 	resultinIterator.nodes = wayFromRoot;
 	return resultinIterator;
@@ -935,12 +938,14 @@ template<Comparable K, CopyConstructible V>
 inline void BinaryTree<K, V>::iterator_base::copy(const iterator_base& other)
 {
 	this->ptr = other.ptr;
+	this->nodes = other.nodes;
+	
 }
 
 template<Comparable K, CopyConstructible V>
 inline std::pair<const K&, V&> BinaryTree<K, V>::iterator_base::get() const
 {
-	if (this->ptr == nullptr) throw new std::logic_error("Iterator operation *: can't get the value of the end/rend node");
+	if (this->ptr == nullptr) throw std::logic_error("Iterator operation *: can't get the value of the end/rend node");
 	return std::pair<const K&, V&>(this->ptr->key, this->ptr->value);
 }
 
