@@ -788,7 +788,7 @@ inline bool BinaryTree<K, V>::erase(const K& key)
 {
 	bool success = true;
 	root = eraseRecursive(root, key, success);
-	if (root) --size_;
+	if (success) --size_;
 	return success;
 }
 
