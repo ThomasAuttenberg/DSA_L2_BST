@@ -538,7 +538,7 @@ int main()
                     std::cout << "[" << (*it).first << " : " << (*it).second << "]\033[0m ";
                 }
                 if (iter == bstree.end() && savedIter == bstree.end()) {
-                    std::cout << "\033[1;37;46m \033[1;37;42m[rend]\033[0m";
+                    std::cout << "\033[1;37;46m \033[1;37;42m[end]\033[0m";
                 }
                 else {
                     if (iter == bstree.end()) std::cout << "\033[1;37;42m[end]\033[0m";
@@ -725,6 +725,21 @@ int main()
         }
         });
 
+    MenuItem contains(" contains(key) [Проверка содержания]", [&] {
+        std::cout << "\nВведите ключ: ";
+    key inputBuffer;
+    std::cin >> inputBuffer;
+    std::cout << "\n" << (bstree.contains(inputBuffer) ? "Возвращено true" : "Возвращено false");
+    _getch();
+        });
+    MenuItem ordinalNum(" ordinalNum(key) [Порядковый номер]", [&] {
+        std::cout << "\nВведите ключ: ";
+        key inputBuffer;
+        std::cin >> inputBuffer;
+        std::cout << " Возвращенное значение: " << bstree.ordinalNum(inputBuffer);
+        _getch();
+    });
+
     iteratorOperations.addItem(begin);
     iteratorOperations.addItem(end);
     iteratorOperations.addItem(rbegin);
@@ -747,6 +762,8 @@ int main()
     navigationMenu.addItem(erase);
     navigationMenu.addItem(keys);
     navigationMenu.addItem(find);
+    navigationMenu.addItem(contains);
+    navigationMenu.addItem(ordinalNum);
     navigationMenu.addItem(tests);
     navigationMenu.addItem(print);
     

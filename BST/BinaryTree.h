@@ -48,10 +48,12 @@ private:
 	void forEachHorizontalInternal(std::function<void(K&, V&, size_t depth, size_t ordinalNumber)>) const;
 
 	Node* findRecursive(const K& key, Node* node, std::stack<Node*>& wayFromRoot) const;
+	Node* findRecursive(const K& key, Node* node) const;
 	Node* eraseRecursive(Node* currentNode, const K& key, bool& success);
 	Node* findMinElement(Node*);
 	bool insertRecursive(const K& key, const V& value, Node* node);
 	Node* findAndCreateIfNotExists(const K& key, Node* node);
+	size_t ordinalNum(const K& key, Node* node, int steps) const;
 	
 	
 public:
@@ -82,6 +84,8 @@ public:
 
 	// Returns the list of tree keys in order: {root, less elements, greater elements}
 	std::list<K> keys() const;
+
+	size_t ordinalNum(K key) const;
 
 	/*==========================================
 					  ACCESS
@@ -326,6 +330,38 @@ inline BinaryTree<K, V>::Node* BinaryTree<K, V>::findRecursive(const K& key, Nod
 	else {
 		wayFromRoot.push(node);
 		return findRecursive(key, node->left,wayFromRoot);
+	}
+}
+template<Comparable K, CopyConstructible V>
+inline BinaryTree<K, V>::Node* BinaryTree<K, V>::findRecursive(const K& key, Node* node) const
+{
+	if (node == root) lastOperationPassedNodes = 0;
+	lastOperationPassedNodes++;
+
+	if (node == nullptr)
+		return nullptr;
+	if (node->key == key)
+		return node;
+	if (key > node->key) {
+		return findRecursive(key, node->right);
+	}
+	else {
+		return findRecursive(key, node->left);
+	}
+}
+
+template<Comparable K, CopyConstructible V>
+inline size_t BinaryTree<K, V>::ordinalNum(const K& key, Node* node, int steps) const {
+	steps++;
+	if (node == nullptr)
+		return -1;
+	if (node->key == key)
+		return steps;
+	if (key > node->key) {
+		return ordinalNum(key, node->right, steps);
+	}
+	else {
+		return ordinalNum(key, node->left, steps);
 	}
 }
 
@@ -580,6 +616,12 @@ inline std::list<K> BinaryTree<K, V>::keys() const
 	}
 	return keys;
 }
+
+template<Comparable K, CopyConstructible V>
+inline size_t BinaryTree<K, V>::ordinalNum(K key) const {
+	return ordinalNum(key, root, -1);
+}
+
 
 /*==========================================================================================
 
