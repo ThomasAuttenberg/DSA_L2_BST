@@ -316,7 +316,7 @@ public:
 template<Comparable K, CopyConstructible V>
 inline BinaryTree<K, V>::Node* BinaryTree<K, V>::findRecursive(const K& key, Node* node, std::stack<Node*>& wayFromRoot) const
 {
-	if (node == root) lastOperationPassedNodes = 0;
+	//if (node == root) lastOperationPassedNodes = 0;
 	lastOperationPassedNodes++;
 
 	if (node == nullptr) 
@@ -335,7 +335,7 @@ inline BinaryTree<K, V>::Node* BinaryTree<K, V>::findRecursive(const K& key, Nod
 template<Comparable K, CopyConstructible V>
 inline BinaryTree<K, V>::Node* BinaryTree<K, V>::findRecursive(const K& key, Node* node) const
 {
-	if (node == root) lastOperationPassedNodes = 0;
+	//if (node == root) lastOperationPassedNodes = 0;
 	lastOperationPassedNodes++;
 
 	if (node == nullptr)
@@ -383,7 +383,7 @@ inline BinaryTree<K, V>::Node* BinaryTree<K, V>::eraseRecursive(Node* currentNod
 		return nullptr;
 	}
 
-	if (currentNode == root) lastOperationPassedNodes = 0;
+	//if (currentNode == root) lastOperationPassedNodes = 0;
 	lastOperationPassedNodes++;
 
 	// если нашли нужный элемент, начинаем процедуру удаления
@@ -456,7 +456,7 @@ inline BinaryTree<K, V>::Node* BinaryTree<K, V>::eraseRecursive(Node* currentNod
 template<Comparable K, CopyConstructible V>
 inline bool BinaryTree<K, V>::insertRecursive(const K& key, const V& value, Node* node)
 {
-		if (node == root) lastOperationPassedNodes = 0;
+		//if (node == root) lastOperationPassedNodes = 0;
 		lastOperationPassedNodes++;
 
 	
@@ -783,6 +783,7 @@ inline V& BinaryTree<K, V>::operator[](const K& key)
 
 template<Comparable K, CopyConstructible V>
 inline V& BinaryTree<K, V>::at(const K& key) {
+	lastOperationPassedNodes = 1;
 	auto it = (find(key));
 	if (it.ptr == nullptr) throw std::out_of_range("operation at: no such key in the tree");
 	return (*it).second;
@@ -814,6 +815,7 @@ inline bool BinaryTree<K, V>::insert(const K& key, const V& value)
 		++size_;
 		return true;
 	}
+	lastOperationPassedNodes = 1;
 	bool result = insertRecursive(key, value, root);
 	if (result) ++size_;
 	return result;
@@ -829,6 +831,7 @@ template<Comparable K, CopyConstructible V>
 inline bool BinaryTree<K, V>::erase(const K& key)
 {
 	bool success = true;
+	lastOperationPassedNodes = 0;
 	root = eraseRecursive(root, key, success);
 	if (success) --size_;
 	return success;
