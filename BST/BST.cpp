@@ -11,13 +11,10 @@
 #include <time.h>
 #include <math.h>
 
-using namespace std;
-typedef unsigned long long INT_64;
-
-
 #include <time.h>
 #include <math.h>
 #include <iostream>
+
 using namespace std;
 typedef unsigned long long INT_64;
 //Генератор случайных чисел большой разрядности
@@ -37,19 +34,17 @@ INT_64 LineRand()
     INT_64 y1, y2;
     y1 = (aRand * RRand + cRand) % mRand;
     y2 = (aRand * y1 + cRand) % mRand;
-    RRand = y1 & 0xFFFFFFFF00000000LL ^ (y2 &
-        0xFFFFFFFF00000000LL) >> 32;
+    RRand = y1 & 0xFFFFFFFF00000000LL ^ (y2 & 0xFFFFFFFF00000000LL) >> 32;
     return RRand;
 }
-//Тест трудоёмкости операций случайного BST - дерева
 void test_rand(int n)
 {
     //создание дерева для 64 – разрядных ключей типа INT_64
     BinaryTree< INT_64, int > tree;
     //массив для ключей, которые присутствуют в дереве
     INT_64* m = new INT_64[n];
-        //установка первого случайного числа
-        sRand();
+    //установка первого случайного числа
+    sRand();
     //заполнение дерева и массива элементами
     //со случайными ключами
     for (int i = 0; i < n; i++)
@@ -77,24 +72,24 @@ void test_rand(int n)
                 S += tree.getLastOpPassedNodesNum();
             }
             //обработка исключения при ошибке операции поиска
-            catch (std::exception) { S += tree.getLastOpPassedNodesNum(); }
-        }
+            catch (...) { S += tree.getLastOpPassedNodesNum(); }
+         }
         else //90% успешных операций
         {
             int ind = rand() % n;
-            tree.erase(m[ind]);
+            bool result1 = tree.erase(m[ind]);
             D += tree.getLastOpPassedNodesNum();
             INT_64 key = LineRand();
-            tree.insert(key, 1);
+            bool result2 = tree.insert(key, 1);
+            if (result1 != true) std::cout << "WARNING!";
+            if (result2 != true) std::cout << "WARNING!!!!222!!!";
             I += tree.getLastOpPassedNodesNum();
             m[ind] = key;
             try {
                 tree.at(m[rand() % n]);
                 S += tree.getLastOpPassedNodesNum();
             }
-            //92
-                //обработка исключения при ошибке операции поиска
-                catch (std::exception) { S += tree.getLastOpPassedNodesNum(); }
+            catch (...) { S += tree.getLastOpPassedNodesNum(); }
         } //конец теста
        //вывод результатов:
        //вывод размера дерева после теста
@@ -111,180 +106,6 @@ void test_rand(int n)
     delete[] m;
 }
 //Тест трудоёмкости операций вырожденного BST - дерева
-/*void test_ord(int n)
-{
-    //создание дерева для 64 – разрядных ключей типа INT_64
-    BST< INT_64, int > tree;
-    //массив для ключей, которые присутствуют в дереве
-    INT_64* m = new INT_64[n];
-    //заполнение дерева и массива элементами
-    // с возрастающими чётными ключами
-    //на интервале [0, 10000, 20000, ... ,10000*n]
-    for (int i = 0; i < n; i++) {
-        m[i] = i * 10000;
-        tree.add(m[i], 1);
-    }
-    //вывод размера дерева до теста
-    cout << "items count:" << tree.Size() << endl;
-    //обнуление счётчиков трудоёмкости вставки,
-    // удаления и поиска
-    double I = 0;
-    double D = 0;
-    double S = 0;
-    93
-        //установка первого случайного числа
-        sRand();
-    //генерация потока операций, 10% - промахи операций
-    for (int i = 0; i < n / 2; i++)
-    {
-        if (i % 10 == 0) //10% промахов
-        {
-            int k = LineRand() % (10000 * n);
-            k = k + !(k % 2); //случайный нечётный ключ
-            tree.remove(k);
-            D += tree.CountNodes();
-            tree.add(m[rand() % n], 1);
-            I += tree.CountNodes();
-            k = LineRand() % (10000 * n);
-            k = k + !(k % 2); // случайный нечётный ключ
-            try {
-                tree.getItem(k);
-                S += tree.CountNodes();
-            }
-            //обработка исключения при ошибке операции поиска
-            catch (int) { S += tree.CountNodes(); }
-        }
-        else //90% успешных операций
-        {
-            int ind = rand() % n;
-            tree.remove(m[ind]);
-            D += tree.CountNodes();;
-            int k = LineRand() % (10000 * n);
-            k = k + k % 2; // случайный чётный ключ
-            tree.add(k, 1);
-            I += tree.CountNodes();;
-            m[ind] = k;
-            try {
-                tree.getItem(m[rand() % n]);
-                S += tree.CountNodes();;
-            }
-            //обработка исключения при ошибке операции поиска
-            catch (int) { S += tree.CountNodes(); }
-        }
-    }
-    //вывод результатов:
-    // вывод размера дерева после теста
-    cout << "items count:" << tree.Size() << endl;
-    94
-        //теоретической оценки трудоёмкости операций BST
-        cout << "n/2 =" << n / 2 << endl;
-    //экспериментальной оценки трудоёмкости вставки
-    cout << "Count insert: " << I / (n / 2) << endl;
-    //экспериментальной оценки трудоёмкости удаления
-    cout << "Count delete: " << D / (n / 2) << endl;
-    //экспериментальной оценки трудоёмкости поиска
-    cout << "Count search: " << S / (n / 2) << endl;
-    //освобождение памяти массива m[]
-    delete[] m;
-} //конец теста
-
-
-
-
-
-//переменная и константы генератора LineRand()
-static INT_64 RRand = 15750;
-const INT_64 mRand = (1 << 63) - 1;
-const INT_64 aRand = 6364136223846793005;
-const INT_64 cRand = 1442695040888963407;
-//функция установки первого случайного числа от часов
-//компьютера
-void sRand() {
-    srand(time(0));
-    RRand = (INT_64)rand();
-}
-//функция генерации случайного числа
-//линейный конгруэнтный генератор Xi+1=(a*Xi+c)%m
-//habr.com/ru/post/208178
-INT_64 LineRand()
-{
-    INT_64 y1, y2;
-    y1 = (aRand * RRand + cRand) % mRand;
-    y2 = (aRand * y1 + cRand) % mRand;
-    RRand = y1 & 0xFFFFFFFF00000000LL ^ (y2 &
-        0xFFFFFFFF00000000LL) >> 32;
-    return RRand;
-}
-
-
-void test_rand(int n)
-{
-    //создание дерева для 64 – разрядных ключей типа INT_64
-    BinaryTree< INT_64, int > tree;
-    //массив для ключей, которые присутствуют в дереве
-    INT_64* m = new INT_64[n];
-    //установка первого случайного числа
-    sRand();
-    //заполнение дерева и массива элементами
-    //со случайными ключами
-    for (int i = 0; i < n; i++)
-    {
-        m[i] = LineRand();
-        tree.insert(m[i], 1);
-    }
-    //вывод размера дерева до теста
-    std::cout << "items count:" << tree.size() << std::endl;
-    //обнуление счётчиков трудоёмкости вставки,
-    //удаления и поиска
-    double I = 0;
-    double D = 0;
-    double S = 0;
-    //генерация потока операций, 10% - промахи операций
-    for (int i = 0; i < n / 2; i++)
-        if (i % 10 == 0) //10% промахов
-        {
-            tree.erase(LineRand());
-            D += tree.getLastOpPassedNodesNum();
-            tree.insert(m[rand() % n], 1);
-            I += tree.getLastOpPassedNodesNum();
-            try {
-                tree.at(LineRand());
-                S += tree.getLastOpPassedNodesNum();
-            }
-            //обработка исключения при ошибке операции поиска
-            catch (...) { S += tree.getLastOpPassedNodesNum(); }
-        }
-        else //90% успешных операций
-        {
-            int ind = rand() % n;
-            tree.erase(m[ind]);
-            D += tree.getLastOpPassedNodesNum();
-            INT_64 key = LineRand();
-            tree.insert(key, 1);
-            I += tree.getLastOpPassedNodesNum();
-            m[ind] = key;
-            try {
-                tree.at(m[rand() % n]);
-                S += tree.getLastOpPassedNodesNum();
-            }
-            //обработка исключения при ошибке операции поиска
-            catch (...) { S += tree.getLastOpPassedNodesNum(); }
-        } //конец теста
-       //вывод результатов:
-       //вывод размера дерева после теста
-    cout << "items count:" << tree.size() << endl;
-    //теоретической оценки трудоёмкости операций BST
-    cout << "1.39*log2(n)=" << 1.39 * (log((double)n) / log(2.0)) << endl;
-    //экспериментальной оценки трудоёмкости вставки
-    cout << "Count insert: " << I / (n / 2) << endl;
-    //экспериментальной оценки трудоёмкости удаления
-    cout << "Count delete: " << D / (n / 2) << endl;
-    //экспериментальной оценки трудоёмкости поиска
-    cout << "Count search: " << S / (n / 2) << endl;
-    //освобождение памяти массива m[]
-    delete[] m;
-}
-*/
 void test_ord(int n)
 {
     //создание дерева для 64 – разрядных ключей типа INT_64
@@ -299,7 +120,7 @@ void test_ord(int n)
         tree.insert(m[i], 1);
     }
     //вывод размера дерева до теста
-    cout << "items count:" << tree.size() << endl;
+    std::cout << "items count:" << tree.size() << endl;
     //обнуление счётчиков трудоёмкости вставки,
     // удаления и поиска
     double I = 0;
@@ -310,8 +131,8 @@ void test_ord(int n)
     //генерация потока операций, 10% - промахи операций
     for (int i = 0; i < n / 2; i++)
     {
-        if (i % 10 == 0) //10% промахов
-        {
+        //if (i % 10 == 0) //10% промахов
+        //{
             int k = LineRand() % (10000 * n);
             k = k + !(k % 2); //случайный нечётный ключ
             tree.erase(k);
@@ -325,101 +146,66 @@ void test_ord(int n)
                 S += tree.getLastOpPassedNodesNum();
             }
             //обработка исключения при ошибке операции поиска
-            catch (std::exception) { S += tree.getLastOpPassedNodesNum(); }
-        }
+            catch (...) { S += tree.getLastOpPassedNodesNum(); }
+       /* }
         else //90% успешных операций
         {
             int ind = rand() % n;
-            tree.erase(m[ind]);
-            D += tree.getLastOpPassedNodesNum();;
+            bool as = tree.contains(m[ind]);
+            bool erRes = tree.erase(m[ind]);
+            if (as != erRes) std::cout << "WARNING!" << m[ind];
+            D += tree.getLastOpPassedNodesNum();
             int k = LineRand() % (10000 * n);
             k = k + k % 2; // случайный чётный ключ
-            tree.insert(k, 1);
-            I += tree.getLastOpPassedNodesNum();;
+            bool contres = tree.contains(k);
+            bool insres = tree.insert(k, 1);
+            if (insres == contres) std::cout << "WARNING INSERT!!";
+            I += tree.getLastOpPassedNodesNum();
             m[ind] = k;
             try {
                 tree.at(m[rand() % n]);
                 S += tree.getLastOpPassedNodesNum();
             }
             //обработка исключения при ошибке операции поиска
-            catch (std::exception) { S += tree.getLastOpPassedNodesNum(); }
-        }
+            catch (...) { S += tree.getLastOpPassedNodesNum(); }
+        }*/
     }
     //вывод результатов:
     // вывод размера дерева после теста
-    cout << "items count:" << tree.size() << endl;
-    //теоретической оценки трудоёмкости операций BST
-    cout << "n/2 =" << n / 2 << endl;
+    std::cout << "items count:" << tree.size() << endl;
+     //теоретической оценки трудоёмкости операций BST
+    std::cout << "n/2 =" << n / 2 << endl;
     //экспериментальной оценки трудоёмкости вставки
-    cout << "Count insert: " << I / (n / 2) << endl;
+    std::cout << "Count insert: " << I / (n / 2) << endl;
     //экспериментальной оценки трудоёмкости удаления
-    cout << "Count delete: " << D / (n / 2) << endl;
+    std::cout << "Count delete: " << D / (n / 2) << endl;
     //экспериментальной оценки трудоёмкости поиска
-    cout << "Count search: " << S / (n / 2) << endl;
+    std::cout << "Count search: " << S / (n / 2) << endl;
     //освобождение памяти массива m[]
     delete[] m;
 } //конец теста
 
 
-
 int main()
 {
-    //std::list<int>::iterator j;
-   
-
-    /*
-        std::map<std::string, unsigned> products;
-        products.insert(std::make_pair("2",5));
-        products.insert(std::make_pair("2", 6));
-        std::cout<<products.at("2")<<"\n\n\n";
-        // установка значений
-        products["bread"] = 30;
-        products["milk"] = 80;
-        //products["apple"];
-        const auto newMap = products;
-
-        //std::cout << newMap["apple"];
-
-        struct meow {
-            int a;
-        };
-        BinaryTree<int, int> s;
-        s.keys();
-        s.insert(6, 5);
-        s.insert(2, 0);
-        s.insert(3, 11);
-        s.insert(11, 15);
-        s.insert(8,0);
-        //s.insert(13, 0);
-        s.insert(9,0);
-        //s.insert(13, 0);
-        //s.insert(12,0);
-        s.erase(11);
-        //auto it = s.begin();
-        //s[2] = 555;
-        std::cout << (s.contains(6) ? "yes\n\n" : "no\n\n");
-        auto list = s.keys();
-
-        for (auto it = list.begin(); it != list.end(); it++) {
-            std::cout << *it <<" ";
-        }
-
-        s.forEach([&](int key, int& val) {
-            std::cout << "[" << key << "][" << val << "] ";
-            });
-        //s.print();
-        std::cout << "\n\n";
-        int depth_ = 0;
-        s.forEach([&](int key, int& val) {
-            std::cout << "[" << key << "][" << val << "] ";
-        });
-        std::cout << "\n";
-        const BinaryTree<int, int> as = s;
-        as.forEachHorizontal([&](const int& key, const int& val, size_t depth, size_t ordinalNumber) {
-            std::cout << depth<<":"<< key << " ";
-         });
-        */
-
+    // Пруфы
+    /* 
+    std::map<int, int> rbTree;
+    auto s = rbTree.end(); // Итератор создается на пустом дереве
+    rbTree.insert(std::make_pair(2,5));
+    s--; // Перемещаем итератор влево: итератор установлен на двойке
+    //std::cout << (*s).first;
+    //_getch();
+    
+    rbTree.erase(2);
+    try {
+        s++;
+    }
+    catch (std::exception ex) {
+        std::cout << ex.what();
+    }
+    _getch();
+    */
 
     system("chcp 1251");
     using value = int;
@@ -464,6 +250,7 @@ int main()
 
             for (auto it = bstree.begin(); it != bstree.end(); it++) {
                 //if (fixedIterActive && &(*iter_fixed) == &(*it)) std::cout << "\033[1;37;46m";
+                bool a = iter == bstree.end();
                 if (iter != bstree.end() && &((*iter).first) == &((*it).first)) std::cout << "\033[1;37;42m";
                 //std::cout << "[this:]" << it.targetIndex << "[prev:]" << list.getNode(it).previousNodeIndex << "[next:]" << list.getNode(it).nextNodeIndex << " value: ";
                 std::cout << "[" << (*it).first << " : " << (*it).second << "]\033[0m ";
@@ -525,12 +312,10 @@ int main()
         std::cin >> inputKeyBuffer;
         std::cout << "\n Введите значение: ";
         std::cin >> inputValueBuffer;
-        bstree.insert(inputKeyBuffer, inputValueBuffer);
-        //std::cout << bstree.getLastOpPassedNodesNum();
-        //_getch();
-        //if (bstree.size() == 1) {
-        if (autoIteratorCorrection) riter = bstree.rbegin();
-        if (autoIteratorCorrection) iter = bstree.begin();
+        if (!bstree.insert(inputKeyBuffer, inputValueBuffer)){
+            std::cout << "\n insert вернул false";
+            _getch();
+        }
         //}
         Menu::console.setMenu(&navigationMenu);
         });
@@ -914,11 +699,11 @@ int main()
     std::cout << "\n" << (bstree.contains(inputBuffer) ? "Возвращено true" : "Возвращено false");
     _getch();
         });
-    MenuItem ordinalNum(" ordinalNum(key) [Порядковый номер]", [&] {
+    MenuItem _getNodeDepth(" getNodeIndex(key) [Порядковый номер]", [&] {
         std::cout << "\nВведите ключ: ";
         key inputBuffer;
         std::cin >> inputBuffer;
-        std::cout << " Возвращенное значение: " << bstree.ordinalNum(inputBuffer);
+        std::cout << " Возвращенное значение: " << bstree.getNodeDepth(inputBuffer);
         _getch();
     });
 
@@ -945,7 +730,7 @@ int main()
     navigationMenu.addItem(keys);
     navigationMenu.addItem(find);
     navigationMenu.addItem(contains);
-    navigationMenu.addItem(ordinalNum);
+    navigationMenu.addItem(_getNodeDepth);
     navigationMenu.addItem(tests);
     navigationMenu.addItem(print);
     
