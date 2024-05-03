@@ -53,10 +53,9 @@ private:
 	bool insertRecursive(const K& key, const V& value, Node* node);
 	Node* findAndCreateIfNotExists(const K& key, Node* node);
 	size_t _getNodeDepth(const K& key, Node* node, int steps) const;
-	
+	void verticalPrint(Node* currentNode, int level);
 	
 public:
-	void print();
 	/*==========================================
 	          RULE OF FIVE + DESTRUCTOR
 	==========================================*/
@@ -294,7 +293,8 @@ public:
 					SERVICE
 	==========================================*/
 	size_t getLastOpPassedNodesNum() { return lastOperationPassedNodes; }
-
+	void print();
+	void verticalPrint();
 };
 
 /*==========================================================================================
@@ -1261,6 +1261,26 @@ inline void BinaryTree<K, V>::print()
 		maxSize *= 2;
 		std::cout << "\n";
 	}
+}
+
+
+template<Comparable K, CopyConstructible V>
+inline void BinaryTree<K, V>::verticalPrint(Node* currentNode, int level) {
+
+	if (currentNode == nullptr)
+		return;
+	verticalPrint(currentNode->right, level + 1);
+	for (int i = 0; i <= 3 * level; i++) {
+		std::cout << " ";
+	}
+	std::cout << currentNode->key <<'\n';
+	verticalPrint(currentNode->left, level + 1);
+
+}
+
+template<Comparable K, CopyConstructible V>
+inline void BinaryTree<K, V>::verticalPrint() {
+	verticalPrint(root, 0);
 }
 
 /*
