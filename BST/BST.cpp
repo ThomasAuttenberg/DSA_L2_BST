@@ -413,6 +413,11 @@ int main()
         _getch();
     });
     
+    MenuItem verticalPrint(" Вертикальный вывод ", [&] {
+        bstree.verticalPrint();
+    _getch();
+        });
+
     /*
     
     Меню итераторов
@@ -703,7 +708,7 @@ int main()
         std::cout << "\nВведите ключ: ";
         key inputBuffer;
         std::cin >> inputBuffer;
-        std::cout << " Возвращенное значение: " << bstree.getNodeDepth(inputBuffer);
+        std::cout << " Возвращенное значение: " << bstree.getNodeIndex(inputBuffer);
         _getch();
     });
 
@@ -732,7 +737,8 @@ int main()
     navigationMenu.addItem(contains);
     navigationMenu.addItem(_getNodeDepth);
     navigationMenu.addItem(tests);
-    navigationMenu.addItem(print);
+    //navigationMenu.addItem(print);
+    navigationMenu.addItem(verticalPrint);
     
     Menu::console.setMenu(&navigationMenu);
     Menu::console.show();
